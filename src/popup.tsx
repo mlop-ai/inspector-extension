@@ -1,6 +1,7 @@
 import "~main.css";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { Button } from "~components/ui/button";
 import {
@@ -21,209 +22,76 @@ import {
 } from "~components/ui/tooltip";
 import { useToast } from "~lib/use-toast";
 
-interface CookieInfo {
-  name: string;
-  value: string;
-  domain: string;
-  path: string;
-  secure: boolean;
-  httpOnly: boolean;
-  sameSite?: string;
-  expirationDate?: number;
-  session: boolean;
-}
+import { CookieList } from "~components/CookieList";
+import { CookieControls } from "~components/CookieControls";
+import { DownloadService } from "~lib/download-service";
+import { useCookieStore } from "~store/cookie-store";
+import {
+  useCurrentTab,
+  useCookies,
+  useRefreshCookies,
+  useSendCookies,
+  useCopyCookie,
+  useCopyAllCookies,
+} from "~hooks/use-cookies";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function CookieInspector() {
-  const [cookies, setCookies] = useState<CookieInfo[]>([]);
-  const [currentUrl, setCurrentUrl] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
-  const [endpoint, setEndpoint] = useState("https://httpbin.org/post");
-  const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const loadCookies = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Zustand store
+  const {
+    currentUrl,
+    searchTerm,
+    darkMode,
+    endpoint,
+    sendResult,
+    setSearchTerm,
+    toggleDarkMode,
+    setEndpoint,
+    getFilteredCookies,
+  } = useCookieStore();
 
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
+  // React Query hooks
+  const { data: currentTab, error: tabError } = useCurrentTab();
+  const {
+    data: cookies = [],
+    isLoading: cookiesLoading,
+    error: cookiesError,
+  } = useCookies();
 
-      if (!tab.url) {
-        setError("Cannot access current tab URL");
-        return;
-      }
+  const refreshCookies = useRefreshCookies();
+  const sendCookies = useSendCookies();
+  const copyCookie = useCopyCookie();
+  const copyAllCookies = useCopyAllCookies();
 
-      setCurrentUrl(tab.url);
-      const allCookies = await chrome.cookies.getAll({ url: tab.url });
-
-      const cookiesWithInfo: CookieInfo[] = allCookies.map((cookie) => ({
-        name: cookie.name,
-        value: cookie.value,
-        domain: cookie.domain,
-        path: cookie.path,
-        secure: cookie.secure,
-        httpOnly: cookie.httpOnly,
-        sameSite: cookie.sameSite,
-        expirationDate: cookie.expirationDate,
-        session: cookie.session,
-      }));
-
-      setCookies(cookiesWithInfo);
-    } catch (err) {
-      const errorMessage = `Failed to load cookies: ${err.message}`;
-      setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendCookies = async () => {
-    try {
-      setSending(true);
-      setSendResult(null);
-
-      const payload = {
-        url: currentUrl,
-        timestamp: new Date().toISOString(),
-        cookies: cookies.map((cookie) => ({
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.domain,
-          path: cookie.path,
-          secure: cookie.secure,
-          httpOnly: cookie.httpOnly,
-          sameSite: cookie.sameSite,
-          expires: cookie.expirationDate
-            ? new Date(cookie.expirationDate * 1000).toISOString()
-            : null,
-          session: cookie.session,
-        })),
-      };
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const successMessage = `✓ Success: ${response.status} ${response.statusText}`;
-        setSendResult(successMessage);
-      } else {
-        const errorMessage = `✗ Error: ${response.status} ${response.statusText}`;
-        setSendResult(errorMessage);
-        toast({
-          title: "Error",
-          description: "Failed to export cookies",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      const errorMessage = `✗ Network Error: ${err.message}`;
-      setSendResult(errorMessage);
-      toast({
-        title: "Network Error",
-        description: "Network error during export",
-        variant: "destructive",
-      });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const downloadCookies = () => {
-    try {
-      const hostname = new URL(currentUrl).hostname;
-      const timestamp = new Date().toISOString().split("T")[0];
-
-      // Create Netscape cookie file format
-      let cookieContent = "# Netscape HTTP Cookie File\n";
-      cookieContent += "# Generated by Cookie Inspector\n";
-      cookieContent += `# Domain: ${hostname}\n`;
-      cookieContent += `# Date: ${new Date().toISOString()}\n\n`;
-
-      cookies.forEach((cookie) => {
-        const domain = cookie.domain.startsWith(".")
-          ? cookie.domain
-          : `.${cookie.domain}`;
-        const domainFlag = cookie.domain.startsWith(".") ? "TRUE" : "FALSE";
-        const path = cookie.path || "/";
-        const secure = cookie.secure ? "TRUE" : "FALSE";
-        const expires = cookie.expirationDate
-          ? Math.floor(cookie.expirationDate).toString()
-          : "0";
-        const name = cookie.name;
-        const value = cookie.value;
-
-        cookieContent += `${domain}\t${domainFlag}\t${path}\t${secure}\t${expires}\t${name}\t${value}\n`;
-      });
-
-      const blob = new Blob([cookieContent], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `cookies_${hostname}_${timestamp}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Cookie file downloaded",
-        variant: "success",
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to download cookies",
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    loadCookies();
-  }, []);
-
+  // Handle dark mode
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  const filteredCookies = cookies.filter(
-    (cookie) =>
-      cookie.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cookie.value.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get filtered cookies
+  const filteredCookies = getFilteredCookies(cookies);
 
-  const formatDate = (timestamp?: number) => {
-    if (!timestamp) return "session";
-    return new Date(timestamp * 1000).toISOString();
-  };
-
-  const copyCookieValue = async (value: string, name: string) => {
+  // Handle cookie click (copy value)
+  const handleCookieClick = async (value: string, name: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await copyCookie.mutateAsync({ value, name });
       toast({
         title: "Copied",
         description: `Copied ${name}`,
-        variant: "success",
+        variant: "default",
       });
-    } catch (err) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to copy",
@@ -232,18 +100,16 @@ function CookieInspector() {
     }
   };
 
-  const copyAllCookies = async () => {
+  // Handle copy all cookies
+  const handleCopyAll = async () => {
     try {
-      const cookieString = cookies
-        .map((c) => `${c.name}=${c.value}`)
-        .join("; ");
-      await navigator.clipboard.writeText(cookieString);
+      const count = await copyAllCookies.mutateAsync(cookies);
       toast({
         title: "Copied",
-        description: `Copied ${cookies.length} cookies`,
-        variant: "success",
+        description: `Copied ${count} cookies`,
+        variant: "default",
       });
-    } catch (err) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to copy cookies",
@@ -252,7 +118,64 @@ function CookieInspector() {
     }
   };
 
-  if (loading) {
+  // Handle download cookies
+  const handleDownload = () => {
+    try {
+      DownloadService.downloadCookies(cookies, currentUrl);
+      toast({
+        title: "Success",
+        description: "Cookie file downloaded",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download cookies",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle send cookies
+  const handleSendCookies = async () => {
+    try {
+      await sendCookies.mutateAsync(cookies);
+      if (sendResult?.startsWith("✓")) {
+        toast({
+          title: "Success",
+          description: "Cookies exported successfully",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export cookies",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    try {
+      await refreshCookies.mutateAsync();
+      toast({
+        title: "Refreshed",
+        description: "Cookies reloaded",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh cookies",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Loading state
+  if (cookiesLoading) {
     return (
       <div className="w-[800px] h-[600px] p-6 space-y-4">
         <Skeleton className="h-8 w-full" />
@@ -266,6 +189,9 @@ function CookieInspector() {
     );
   }
 
+  // Error state
+  const error = tabError || cookiesError;
+
   return (
     <TooltipProvider>
       <div className="w-[800px] h-[600px] p-6 bg-background text-foreground font-mono text-sm">
@@ -276,93 +202,51 @@ function CookieInspector() {
               Cookie Inspector
             </h1>
             <div className="text-xs text-muted-foreground font-mono break-all">
-              {new URL(currentUrl).hostname}
+              {currentUrl ? new URL(currentUrl).hostname : "Loading..."}
             </div>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={toggleDarkMode}
               className="text-xs"
             >
               {darkMode ? "☀️" : "🌙"}
             </Button>
             <Button
-              onClick={loadCookies}
+              onClick={handleRefresh}
               variant="outline"
               size="sm"
               className="text-xs"
+              disabled={refreshCookies.isPending}
             >
-              Refresh
+              {refreshCookies.isPending ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
         </div>
 
+        {/* Error Display */}
         {error && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded text-red-400 text-xs">
-            Error: {error}
+            Error: {error.message}
           </div>
         )}
 
         {/* Controls */}
-        <div className="space-y-3 mb-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Filter cookies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 font-mono text-xs bg-background"
-            />
-            <Button
-              onClick={copyAllCookies}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              Copy All
-            </Button>
-            <Button
-              onClick={downloadCookies}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              Download
-            </Button>
-          </div>
-
-          {/* HTTP Endpoint */}
-          <div className="flex gap-2">
-            <Input
-              placeholder="HTTP endpoint URL..."
-              value={endpoint}
-              onChange={(e) => setEndpoint(e.target.value)}
-              className="flex-1 font-mono text-xs bg-background"
-            />
-            <Button
-              onClick={sendCookies}
-              disabled={sending || !endpoint}
-              variant="default"
-              size="sm"
-              className="text-xs bg-blue-600 hover:bg-blue-700"
-            >
-              {sending ? "Sending..." : "Export Cookies"}
-            </Button>
-          </div>
-
-          {sendResult && (
-            <div
-              className={`text-xs p-2 rounded ${sendResult.startsWith("✓") ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
-            >
-              {sendResult}
-            </div>
-          )}
-
-          <div className="text-xs text-muted-foreground">
-            {filteredCookies.length} of {cookies.length} cookies
-          </div>
-        </div>
+        <CookieControls
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          endpoint={endpoint}
+          onEndpointChange={setEndpoint}
+          sendResult={sendResult}
+          onCopyAll={handleCopyAll}
+          onDownload={handleDownload}
+          onSendCookies={handleSendCookies}
+          isSending={sendCookies.isPending}
+          cookiesCount={cookies.length}
+          filteredCount={filteredCookies.length}
+        />
 
         {/* Cookie List */}
         <div className="space-y-1 max-h-96 overflow-y-auto border rounded bg-background/50">
@@ -373,86 +257,10 @@ function CookieInspector() {
                 : "No matching cookies"}
             </div>
           ) : (
-            <div className="space-y-0">
-              {/* Header */}
-              <div className="sticky top-0 bg-muted p-2 text-xs font-bold border-b grid grid-cols-12 gap-2">
-                <div className="col-span-3">Name</div>
-                <div className="col-span-5">Value</div>
-                <div className="col-span-2">Domain</div>
-                <div className="col-span-2">Flags</div>
-              </div>
-
-              {filteredCookies.map((cookie, index) => (
-                <div
-                  key={index}
-                  className="p-2 text-xs border-b hover:bg-accent/50 grid grid-cols-12 gap-2 items-center cursor-pointer"
-                  onClick={() => copyCookieValue(cookie.value, cookie.name)}
-                  title="Click to copy value"
-                >
-                  <div className="col-span-3 font-semibold text-blue-600 dark:text-blue-400 break-all">
-                    {cookie.name}
-                  </div>
-                  <div className="col-span-5 break-all text-muted-foreground">
-                    {cookie.value.length > 60
-                      ? `${cookie.value.substring(0, 60)}...`
-                      : cookie.value || "(empty)"}
-                  </div>
-                  <div className="col-span-2 text-muted-foreground">
-                    {cookie.domain}
-                  </div>
-                  <div className="col-span-2 space-x-1">
-                    {cookie.secure && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <span className="text-green-500 dark:text-green-400">
-                            S
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Secure - Only sent over HTTPS</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {cookie.httpOnly && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <span className="text-yellow-500 dark:text-yellow-400">
-                            H
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>HttpOnly - Not accessible via JavaScript</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {cookie.sameSite && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <span className="text-purple-500 dark:text-purple-400">
-                            SS
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>SameSite - {cookie.sameSite}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {cookie.session && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <span className="text-blue-500 dark:text-blue-400">
-                            T
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Session - Temporary cookie</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CookieList
+              cookies={filteredCookies}
+              onCookieClick={handleCookieClick}
+            />
           )}
         </div>
 
@@ -468,7 +276,11 @@ function CookieInspector() {
 }
 
 function IndexPopup() {
-  return <CookieInspector />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CookieInspector />
+    </QueryClientProvider>
+  );
 }
 
 export default IndexPopup;
