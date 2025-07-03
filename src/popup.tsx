@@ -22,8 +22,8 @@ import {
 } from "~components/ui/tooltip";
 import { useToast } from "~lib/use-toast";
 
-import { CookieList } from "~components/CookieList";
-import { CookieControls } from "~components/CookieControls";
+import { CookieList } from "~components/cookie-list";
+import { CookieControls } from "~components/cookie-controls";
 import { DownloadService } from "~lib/download-service";
 import { useCookieStore } from "~store/cookie-store";
 import {
@@ -89,7 +89,7 @@ function CookieInspector() {
       toast({
         title: "Copied",
         description: `Copied ${name}`,
-        variant: "default",
+        variant: "success",
       });
     } catch (error) {
       toast({
@@ -107,7 +107,7 @@ function CookieInspector() {
       toast({
         title: "Copied",
         description: `Copied ${count} cookies`,
-        variant: "default",
+        variant: "success",
       });
     } catch (error) {
       toast({
@@ -125,7 +125,7 @@ function CookieInspector() {
       toast({
         title: "Success",
         description: "Cookie file downloaded",
-        variant: "default",
+        variant: "success",
       });
     } catch (error) {
       toast({
@@ -144,7 +144,7 @@ function CookieInspector() {
         toast({
           title: "Success",
           description: "Cookies exported successfully",
-          variant: "default",
+          variant: "success",
         });
       }
     } catch (error) {
@@ -163,7 +163,7 @@ function CookieInspector() {
       toast({
         title: "Refreshed",
         description: "Cookies reloaded",
-        variant: "default",
+        variant: "success",
       });
     } catch (error) {
       toast({

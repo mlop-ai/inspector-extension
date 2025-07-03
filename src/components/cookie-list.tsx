@@ -61,7 +61,12 @@ function CookieRow({ cookie, onClick }: CookieRowProps) {
           ? `${cookie.value.substring(0, 60)}...`
           : cookie.value || "(empty)"}
       </div>
-      <div className="col-span-2 text-muted-foreground">{cookie.domain}</div>
+      <div
+        className="col-span-2 text-muted-foreground truncate"
+        title={cookie.domain}
+      >
+        {cookie.domain}
+      </div>
       <div className="col-span-2 space-x-1">
         <CookieFlags cookie={cookie} />
       </div>
