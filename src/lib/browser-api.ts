@@ -33,6 +33,25 @@ interface LocalStorageItem {
   size: number; // Size in bytes
 }
 
+interface WebRequest {
+  id: string;
+  url: string;
+  method: string;
+  status?: number;
+  timestamp: number;
+  type: string; // main_frame, sub_frame, stylesheet, script, image, etc.
+  initiator?: string;
+  size?: number;
+  duration?: number;
+  requestHeaders?: { [key: string]: string };
+  responseHeaders?: { [key: string]: string };
+  requestBody?: string;
+  responseBody?: string;
+  statusText?: string;
+  fromCache?: boolean;
+  error?: string;
+}
+
 class BrowserAPI {
   private async getBrowser() {
     // Plasmo provides cross-browser compatibility
@@ -277,7 +296,62 @@ class BrowserAPI {
       );
     });
   }
+
+  // WebRequest methods
+  async getWebRequests(): Promise<WebRequest[]> {
+    const browserAPI = await this.getBrowser();
+
+    return new Promise((resolve, reject) => {
+      browserAPI.runtime.sendMessage(
+        { type: "GET_WEB_REQUESTS" },
+        (response) => {
+          if (browserAPI.runtime.lastError) {
+            reject(new Error(browserAPI.runtime.lastError.message));
+            return;
+          }
+
+          if (!response) {
+            reject(new Error("No response from background script"));
+            return;
+          }
+
+          if (response.success) {
+            resolve(response.data || []);
+          } else {
+            reject(new Error(response.error || "Failed to get web requests"));
+          }
+        }
+      );
+    });
+  }
+
+  async clearWebRequests(): Promise<void> {
+    const browserAPI = await this.getBrowser();
+
+    return new Promise((resolve, reject) => {
+      browserAPI.runtime.sendMessage(
+        { type: "CLEAR_WEB_REQUESTS" },
+        (response) => {
+          if (browserAPI.runtime.lastError) {
+            reject(new Error(browserAPI.runtime.lastError.message));
+            return;
+          }
+
+          if (!response) {
+            reject(new Error("No response from background script"));
+            return;
+          }
+
+          if (response.success) {
+            resolve();
+          } else {
+            reject(new Error(response.error || "Failed to clear web requests"));
+          }
+        }
+      );
+    });
+  }
 }
 
 export const browserAPI = new BrowserAPI();
-export type { BrowserTab, BrowserCookie, LocalStorageItem };
+export type { BrowserTab, BrowserCookie, LocalStorageItem, WebRequest };

@@ -13,8 +13,8 @@ interface DataControlsProps {
   isSending: boolean;
   dataCount: number;
   filteredCount: number;
-  dataType: "cookies" | "localStorage";
-  onClearAll?: () => void; // Only for localStorage
+  dataType: "cookies" | "localStorage" | "webRequests";
+  onClearAll?: () => void; // For localStorage and webRequests
 }
 
 export function DataControls({
@@ -32,9 +32,18 @@ export function DataControls({
   dataType,
   onClearAll,
 }: DataControlsProps) {
-  const dataLabel = dataType === "cookies" ? "cookies" : "localStorage items";
+  const dataLabel =
+    dataType === "cookies"
+      ? "cookies"
+      : dataType === "localStorage"
+        ? "localStorage items"
+        : "web requests";
   const actionLabel =
-    dataType === "cookies" ? "Export Cookies" : "Export LocalStorage";
+    dataType === "cookies"
+      ? "Export Cookies"
+      : dataType === "localStorage"
+        ? "Export LocalStorage"
+        : "Export Requests";
 
   return (
     <div className="space-y-3 mb-4">
@@ -46,32 +55,37 @@ export function DataControls({
           onChange={(e) => onSearchChange(e.target.value)}
           className="flex-1 font-mono text-xs bg-background"
         />
-        <Button
-          onClick={onCopyAll}
-          variant="outline"
-          size="sm"
-          className="text-xs"
-        >
-          Copy All
-        </Button>
-        <Button
-          onClick={onDownload}
-          variant="outline"
-          size="sm"
-          className="text-xs"
-        >
-          Download
-        </Button>
-        {dataType === "localStorage" && onClearAll && (
+        {dataType !== "webRequests" && (
           <Button
-            onClick={onClearAll}
+            onClick={onCopyAll}
             variant="outline"
             size="sm"
-            className="text-xs text-red-500 hover:text-red-700"
+            className="text-xs"
           >
-            Clear All
+            Copy All
           </Button>
         )}
+        {dataType !== "webRequests" && (
+          <Button
+            onClick={onDownload}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+          >
+            Download
+          </Button>
+        )}
+        {(dataType === "localStorage" || dataType === "webRequests") &&
+          onClearAll && (
+            <Button
+              onClick={onClearAll}
+              variant="outline"
+              size="sm"
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              Clear All
+            </Button>
+          )}
       </div>
 
       {/* HTTP Endpoint */}

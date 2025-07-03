@@ -3,6 +3,7 @@ import {
   browserAPI,
   type BrowserCookie,
   type LocalStorageItem,
+  type WebRequest,
 } from "~lib/browser-api";
 import { useCookieStore } from "~store/cookie-store";
 
@@ -10,6 +11,7 @@ import { useCookieStore } from "~store/cookie-store";
 export const QUERY_KEYS = {
   cookies: (url: string) => ["cookies", url] as const,
   localStorage: (url: string) => ["localStorage", url] as const,
+  webRequests: () => ["webRequests"] as const,
   currentTab: () => ["currentTab"] as const,
 };
 
@@ -57,6 +59,17 @@ export function useLocalStorage() {
   });
 }
 
+// Hook to get web requests
+export function useWebRequests() {
+  return useQuery({
+    queryKey: QUERY_KEYS.webRequests(),
+    queryFn: () => browserAPI.getWebRequests(),
+    staleTime: 1000 * 5, // 5 seconds
+    retry: 2,
+    refetchInterval: 2000, // Auto-refresh every 2 seconds
+  });
+}
+
 // Hook to refresh cookies
 export function useRefreshCookies() {
   const queryClient = useQueryClient();
@@ -90,6 +103,24 @@ export function useRefreshLocalStorage() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.localStorage(currentUrl),
+      });
+    },
+  });
+}
+
+// Hook to refresh web requests
+export function useRefreshWebRequests() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const requests = await browserAPI.getWebRequests();
+      queryClient.setQueryData(QUERY_KEYS.webRequests(), requests);
+      return requests;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.webRequests(),
       });
     },
   });
@@ -213,6 +244,16 @@ export function useCopyLocalStorageItem() {
   });
 }
 
+// Hook to copy web request URL
+export function useCopyWebRequestUrl() {
+  return useMutation({
+    mutationFn: async (url: string) => {
+      await browserAPI.copyToClipboard(url);
+      return url;
+    },
+  });
+}
+
 // Hook to copy all cookies
 export function useCopyAllCookies() {
   return useMutation({
@@ -309,6 +350,23 @@ export function useClearLocalStorage() {
       // Refresh the localStorage list after clearing
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.localStorage(currentUrl),
+      });
+    },
+  });
+}
+
+// Hook to clear web requests
+export function useClearWebRequests() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await browserAPI.clearWebRequests();
+    },
+    onSuccess: () => {
+      // Refresh the web requests list after clearing
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.webRequests(),
       });
     },
   });

@@ -24,25 +24,35 @@ import { useToast } from "~lib/use-toast";
 
 import { CookieList } from "~components/cookie-list";
 import { LocalStorageList } from "~components/localStorage-list";
+import { WebRequestList } from "~components/web-request-list";
+import { WebRequestTypeFilters } from "~components/web-request-type-filters";
 import { DataControls } from "~components/data-controls";
 import { DownloadService } from "~lib/download-service";
 import { useCookieStore } from "~store/cookie-store";
-import type { BrowserCookie, LocalStorageItem } from "~lib/browser-api";
+import type {
+  BrowserCookie,
+  LocalStorageItem,
+  WebRequest,
+} from "~lib/browser-api";
 import {
   useCurrentTab,
   useCookies,
   useLocalStorage,
+  useWebRequests,
   useRefreshCookies,
   useRefreshLocalStorage,
+  useRefreshWebRequests,
   useSendCookies,
   useSendLocalStorage,
   useCopyCookie,
   useCopyLocalStorageItem,
+  useCopyWebRequestUrl,
   useCopyAllCookies,
   useCopyAllLocalStorage,
   useDeleteCookie,
   useDeleteLocalStorageItem,
   useClearLocalStorage,
+  useClearWebRequests,
 } from "~hooks/use-storage";
 
 // Create a client
@@ -66,12 +76,16 @@ function CookieInspector() {
     endpoint,
     sendResult,
     activeTab,
+    webRequestTypeFilters,
     setSearchTerm,
     toggleDarkMode,
     setEndpoint,
     setActiveTab,
+    toggleWebRequestTypeFilter,
+    clearWebRequestTypeFilters,
     getFilteredCookies,
     getFilteredLocalStorage,
+    getFilteredWebRequests,
   } = useCookieStore();
 
   // React Query hooks
@@ -86,18 +100,26 @@ function CookieInspector() {
     isLoading: localStorageLoading,
     error: localStorageError,
   } = useLocalStorage();
+  const {
+    data: webRequests = [],
+    isLoading: webRequestsLoading,
+    error: webRequestsError,
+  } = useWebRequests();
 
   const refreshCookies = useRefreshCookies();
   const refreshLocalStorage = useRefreshLocalStorage();
+  const refreshWebRequests = useRefreshWebRequests();
   const sendCookies = useSendCookies();
   const sendLocalStorage = useSendLocalStorage();
   const copyCookie = useCopyCookie();
   const copyLocalStorageItem = useCopyLocalStorageItem();
+  const copyWebRequestUrl = useCopyWebRequestUrl();
   const copyAllCookies = useCopyAllCookies();
   const copyAllLocalStorage = useCopyAllLocalStorage();
   const deleteCookie = useDeleteCookie();
   const deleteLocalStorageItem = useDeleteLocalStorageItem();
   const clearLocalStorage = useClearLocalStorage();
+  const clearWebRequests = useClearWebRequests();
 
   // Handle dark mode
   useEffect(() => {
@@ -107,20 +129,38 @@ function CookieInspector() {
   // Get filtered data
   const filteredCookies = getFilteredCookies(cookies);
   const filteredLocalStorage = getFilteredLocalStorage(localStorageItems);
+  const filteredWebRequests = getFilteredWebRequests(webRequests);
+
+  // Get available request types for filtering
+  const availableRequestTypes = Array.from(
+    new Set(webRequests.map((request) => request.type))
+  ).sort();
 
   // Generic handlers
-  const handleItemClick = async (value: string, name: string) => {
+  const handleItemClick = async (value: string, name?: string) => {
     try {
       if (activeTab === "cookies") {
-        await copyCookie.mutateAsync({ value, name });
-      } else {
-        await copyLocalStorageItem.mutateAsync({ value, key: name });
+        await copyCookie.mutateAsync({ value, name: name! });
+        toast({
+          title: "Copied",
+          description: `Copied ${name}`,
+          variant: "success",
+        });
+      } else if (activeTab === "localStorage") {
+        await copyLocalStorageItem.mutateAsync({ value, key: name! });
+        toast({
+          title: "Copied",
+          description: `Copied ${name}`,
+          variant: "success",
+        });
+      } else if (activeTab === "webRequests") {
+        await copyWebRequestUrl.mutateAsync(value);
+        toast({
+          title: "Copied",
+          description: "Copied URL",
+          variant: "success",
+        });
       }
-      toast({
-        title: "Copied",
-        description: `Copied ${name}`,
-        variant: "success",
-      });
     } catch (error) {
       toast({
         title: "Error",
@@ -215,11 +255,18 @@ function CookieInspector() {
           description: "Cookies reloaded",
           variant: "success",
         });
-      } else {
+      } else if (activeTab === "localStorage") {
         await refreshLocalStorage.mutateAsync();
         toast({
           title: "Refreshed",
           description: "LocalStorage reloaded",
+          variant: "success",
+        });
+      } else if (activeTab === "webRequests") {
+        await refreshWebRequests.mutateAsync();
+        toast({
+          title: "Refreshed",
+          description: "Web requests reloaded",
           variant: "success",
         });
       }
@@ -283,12 +330,33 @@ function CookieInspector() {
     }
   };
 
+  const handleClearAllWebRequests = async () => {
+    try {
+      await clearWebRequests.mutateAsync();
+      toast({
+        title: "Cleared",
+        description: "All web requests cleared",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear web requests",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Loading state
   const isLoading =
-    activeTab === "cookies" ? cookiesLoading : localStorageLoading;
+    activeTab === "cookies"
+      ? cookiesLoading
+      : activeTab === "localStorage"
+        ? localStorageLoading
+        : webRequestsLoading;
   if (isLoading) {
     return (
-      <div className="w-[800px] h-[600px] p-6 space-y-4">
+      <div className="w-[1200px] h-[800px] p-6 space-y-4">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <div className="space-y-2">
@@ -301,7 +369,8 @@ function CookieInspector() {
   }
 
   // Error state
-  const error = tabError || cookiesError || localStorageError;
+  const error =
+    tabError || cookiesError || localStorageError || webRequestsError;
 
   return (
     <TooltipProvider>
@@ -332,11 +401,14 @@ function CookieInspector() {
               className="text-xs"
               disabled={
                 (activeTab === "cookies" && refreshCookies.isPending) ||
-                (activeTab === "localStorage" && refreshLocalStorage.isPending)
+                (activeTab === "localStorage" &&
+                  refreshLocalStorage.isPending) ||
+                (activeTab === "webRequests" && refreshWebRequests.isPending)
               }
             >
               {(activeTab === "cookies" && refreshCookies.isPending) ||
-              (activeTab === "localStorage" && refreshLocalStorage.isPending)
+              (activeTab === "localStorage" && refreshLocalStorage.isPending) ||
+              (activeTab === "webRequests" && refreshWebRequests.isPending)
                 ? "Refreshing..."
                 : "Refresh"}
             </Button>
@@ -360,6 +432,14 @@ function CookieInspector() {
             className="text-xs rounded-b-none"
           >
             LocalStorage ({localStorageItems.length})
+          </Button>
+          <Button
+            variant={activeTab === "webRequests" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("webRequests")}
+            className="text-xs rounded-b-none"
+          >
+            Requests ({webRequests.length})
           </Button>
         </div>
 
@@ -385,23 +465,41 @@ function CookieInspector() {
             (activeTab === "localStorage" && sendLocalStorage.isPending)
           }
           dataCount={
-            activeTab === "cookies" ? cookies.length : localStorageItems.length
+            activeTab === "cookies"
+              ? cookies.length
+              : activeTab === "localStorage"
+                ? localStorageItems.length
+                : webRequests.length
           }
           filteredCount={
             activeTab === "cookies"
               ? filteredCookies.length
-              : filteredLocalStorage.length
+              : activeTab === "localStorage"
+                ? filteredLocalStorage.length
+                : filteredWebRequests.length
           }
           dataType={activeTab}
           onClearAll={
             activeTab === "localStorage"
               ? handleClearAllLocalStorage
-              : undefined
+              : activeTab === "webRequests"
+                ? handleClearAllWebRequests
+                : undefined
           }
         />
 
+        {/* Web Request Type Filters */}
+        {activeTab === "webRequests" && (
+          <WebRequestTypeFilters
+            activeFilters={webRequestTypeFilters}
+            onToggleFilter={toggleWebRequestTypeFilter}
+            onClearFilters={clearWebRequestTypeFilters}
+            availableTypes={availableRequestTypes}
+          />
+        )}
+
         {/* Data List */}
-        <div className="space-y-1 max-h-96 overflow-y-auto border rounded bg-background/50">
+        <div className="space-y-1 max-h-[500px] overflow-y-auto border rounded bg-background/50">
           {activeTab === "cookies" ? (
             filteredCookies.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-xs">
@@ -416,17 +514,30 @@ function CookieInspector() {
                 onCookieDelete={handleDeleteCookie}
               />
             )
-          ) : filteredLocalStorage.length === 0 ? (
+          ) : activeTab === "localStorage" ? (
+            filteredLocalStorage.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground text-xs">
+                {localStorageItems.length === 0
+                  ? "No localStorage items detected"
+                  : "No matching localStorage items"}
+              </div>
+            ) : (
+              <LocalStorageList
+                items={filteredLocalStorage}
+                onItemClick={handleItemClick}
+                onItemDelete={handleDeleteLocalStorageItem}
+              />
+            )
+          ) : filteredWebRequests.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground text-xs">
-              {localStorageItems.length === 0
-                ? "No localStorage items detected"
-                : "No matching localStorage items"}
+              {webRequests.length === 0
+                ? "No web requests detected"
+                : "No matching web requests"}
             </div>
           ) : (
-            <LocalStorageList
-              items={filteredLocalStorage}
-              onItemClick={handleItemClick}
-              onItemDelete={handleDeleteLocalStorageItem}
+            <WebRequestList
+              requests={filteredWebRequests}
+              onRequestClick={handleItemClick}
             />
           )}
         </div>
@@ -435,7 +546,9 @@ function CookieInspector() {
         <div className="mt-2 text-xs text-muted-foreground">
           {activeTab === "cookies"
             ? "Flags: S=Secure, H=HttpOnly, SS=SameSite, T=Session • Click row to copy value • Click × to delete"
-            : "Click row to copy value • Click × to delete item"}
+            : activeTab === "localStorage"
+              ? "Click row to copy value • Click × to delete item"
+              : "Filter by type above • Click + to expand and see request/response details • Click row to copy URL • Status codes: 2xx=Success, 3xx=Redirect, 4xx/5xx=Error"}
         </div>
       </div>
       <Toaster />
