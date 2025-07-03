@@ -26,6 +26,7 @@ import { CookieList } from "~components/cookie-list";
 import { CookieControls } from "~components/cookie-controls";
 import { DownloadService } from "~lib/download-service";
 import { useCookieStore } from "~store/cookie-store";
+import type { BrowserCookie } from "~lib/browser-api";
 import {
   useCurrentTab,
   useCookies,
@@ -33,6 +34,7 @@ import {
   useSendCookies,
   useCopyCookie,
   useCopyAllCookies,
+  useDeleteCookie,
 } from "~hooks/use-cookies";
 
 // Create a client
@@ -73,6 +75,7 @@ function CookieInspector() {
   const sendCookies = useSendCookies();
   const copyCookie = useCopyCookie();
   const copyAllCookies = useCopyAllCookies();
+  const deleteCookie = useDeleteCookie();
 
   // Handle dark mode
   useEffect(() => {
@@ -174,6 +177,24 @@ function CookieInspector() {
     }
   };
 
+  // Handle delete cookie
+  const handleDeleteCookie = async (cookie: BrowserCookie) => {
+    try {
+      await deleteCookie.mutateAsync(cookie);
+      toast({
+        title: "Deleted",
+        description: `Deleted cookie: ${cookie.name}`,
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete cookie",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Loading state
   if (cookiesLoading) {
     return (
@@ -260,6 +281,7 @@ function CookieInspector() {
             <CookieList
               cookies={filteredCookies}
               onCookieClick={handleCookieClick}
+              onCookieDelete={handleDeleteCookie}
             />
           )}
         </div>
@@ -267,7 +289,7 @@ function CookieInspector() {
         {/* Legend */}
         <div className="mt-2 text-xs text-muted-foreground">
           Flags: S=Secure, H=HttpOnly, SS=SameSite, T=Session • Click row to
-          copy value
+          copy value • Click × to delete
         </div>
       </div>
       <Toaster />

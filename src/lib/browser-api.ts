@@ -113,6 +113,27 @@ class BrowserAPI {
       document.body.removeChild(textArea);
     }
   }
+
+  async deleteCookie(cookie: BrowserCookie): Promise<void> {
+    const browserAPI = await this.getBrowser();
+
+    if (!browserAPI.cookies) {
+      throw new Error("Cookies API not available");
+    }
+
+    // Construct the URL for the cookie's domain
+    const protocol = cookie.secure ? "https://" : "http://";
+    const url = `${protocol}${cookie.domain}${cookie.path}`;
+
+    try {
+      await browserAPI.cookies.remove({
+        url: url,
+        name: cookie.name,
+      });
+    } catch (error) {
+      throw new Error(`Failed to delete cookie: ${error.message}`);
+    }
+  }
 }
 
 export const browserAPI = new BrowserAPI();

@@ -133,3 +133,22 @@ export function useCopyAllCookies() {
     },
   });
 }
+
+// Hook to delete a cookie
+export function useDeleteCookie() {
+  const queryClient = useQueryClient();
+  const { currentUrl } = useCookieStore();
+
+  return useMutation({
+    mutationFn: async (cookie: BrowserCookie) => {
+      await browserAPI.deleteCookie(cookie);
+      return cookie;
+    },
+    onSuccess: () => {
+      // Refresh the cookies list after deletion
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.cookies(currentUrl),
+      });
+    },
+  });
+}
