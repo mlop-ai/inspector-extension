@@ -23,19 +23,27 @@ import {
 import { useToast } from "~lib/use-toast";
 
 import { CookieList } from "~components/cookie-list";
-import { CookieControls } from "~components/cookie-controls";
+import { LocalStorageList } from "~components/localStorage-list";
+import { DataControls } from "~components/data-controls";
 import { DownloadService } from "~lib/download-service";
 import { useCookieStore } from "~store/cookie-store";
-import type { BrowserCookie } from "~lib/browser-api";
+import type { BrowserCookie, LocalStorageItem } from "~lib/browser-api";
 import {
   useCurrentTab,
   useCookies,
+  useLocalStorage,
   useRefreshCookies,
+  useRefreshLocalStorage,
   useSendCookies,
+  useSendLocalStorage,
   useCopyCookie,
+  useCopyLocalStorageItem,
   useCopyAllCookies,
+  useCopyAllLocalStorage,
   useDeleteCookie,
-} from "~hooks/use-cookies";
+  useDeleteLocalStorageItem,
+  useClearLocalStorage,
+} from "~hooks/use-storage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -57,10 +65,13 @@ function CookieInspector() {
     darkMode,
     endpoint,
     sendResult,
+    activeTab,
     setSearchTerm,
     toggleDarkMode,
     setEndpoint,
+    setActiveTab,
     getFilteredCookies,
+    getFilteredLocalStorage,
   } = useCookieStore();
 
   // React Query hooks
@@ -70,25 +81,41 @@ function CookieInspector() {
     isLoading: cookiesLoading,
     error: cookiesError,
   } = useCookies();
+  const {
+    data: localStorageItems = [],
+    isLoading: localStorageLoading,
+    error: localStorageError,
+  } = useLocalStorage();
 
   const refreshCookies = useRefreshCookies();
+  const refreshLocalStorage = useRefreshLocalStorage();
   const sendCookies = useSendCookies();
+  const sendLocalStorage = useSendLocalStorage();
   const copyCookie = useCopyCookie();
+  const copyLocalStorageItem = useCopyLocalStorageItem();
   const copyAllCookies = useCopyAllCookies();
+  const copyAllLocalStorage = useCopyAllLocalStorage();
   const deleteCookie = useDeleteCookie();
+  const deleteLocalStorageItem = useDeleteLocalStorageItem();
+  const clearLocalStorage = useClearLocalStorage();
 
   // Handle dark mode
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // Get filtered cookies
+  // Get filtered data
   const filteredCookies = getFilteredCookies(cookies);
+  const filteredLocalStorage = getFilteredLocalStorage(localStorageItems);
 
-  // Handle cookie click (copy value)
-  const handleCookieClick = async (value: string, name: string) => {
+  // Generic handlers
+  const handleItemClick = async (value: string, name: string) => {
     try {
-      await copyCookie.mutateAsync({ value, name });
+      if (activeTab === "cookies") {
+        await copyCookie.mutateAsync({ value, name });
+      } else {
+        await copyLocalStorageItem.mutateAsync({ value, key: name });
+      }
       toast({
         title: "Copied",
         description: `Copied ${name}`,
@@ -103,81 +130,108 @@ function CookieInspector() {
     }
   };
 
-  // Handle copy all cookies
   const handleCopyAll = async () => {
     try {
-      const count = await copyAllCookies.mutateAsync(cookies);
-      toast({
-        title: "Copied",
-        description: `Copied ${count} cookies`,
-        variant: "success",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to copy cookies",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle download cookies
-  const handleDownload = () => {
-    try {
-      DownloadService.downloadCookies(cookies, currentUrl);
-      toast({
-        title: "Success",
-        description: "Cookie file downloaded",
-        variant: "success",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to download cookies",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle send cookies
-  const handleSendCookies = async () => {
-    try {
-      await sendCookies.mutateAsync(cookies);
-      if (sendResult?.startsWith("✓")) {
+      if (activeTab === "cookies") {
+        const count = await copyAllCookies.mutateAsync(cookies);
         toast({
-          title: "Success",
-          description: "Cookies exported successfully",
+          title: "Copied",
+          description: `Copied ${count} cookies`,
+          variant: "success",
+        });
+      } else {
+        const count = await copyAllLocalStorage.mutateAsync(localStorageItems);
+        toast({
+          title: "Copied",
+          description: `Copied ${count} localStorage items`,
           variant: "success",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to export cookies",
+        description: `Failed to copy ${activeTab}`,
         variant: "destructive",
       });
     }
   };
 
-  // Handle refresh
-  const handleRefresh = async () => {
+  const handleDownload = () => {
     try {
-      await refreshCookies.mutateAsync();
-      toast({
-        title: "Refreshed",
-        description: "Cookies reloaded",
-        variant: "success",
-      });
+      if (activeTab === "cookies") {
+        DownloadService.downloadCookies(cookies, currentUrl);
+        toast({
+          title: "Success",
+          description: "Cookie file downloaded",
+          variant: "success",
+        });
+      } else {
+        DownloadService.downloadLocalStorage(localStorageItems, currentUrl);
+        toast({
+          title: "Success",
+          description: "LocalStorage file downloaded",
+          variant: "success",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to refresh cookies",
+        description: `Failed to download ${activeTab}`,
         variant: "destructive",
       });
     }
   };
 
-  // Handle delete cookie
+  const handleSendData = async () => {
+    try {
+      if (activeTab === "cookies") {
+        await sendCookies.mutateAsync(cookies);
+      } else {
+        await sendLocalStorage.mutateAsync(localStorageItems);
+      }
+
+      if (sendResult?.startsWith("✓")) {
+        toast({
+          title: "Success",
+          description: `${activeTab} exported successfully`,
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to export ${activeTab}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      if (activeTab === "cookies") {
+        await refreshCookies.mutateAsync();
+        toast({
+          title: "Refreshed",
+          description: "Cookies reloaded",
+          variant: "success",
+        });
+      } else {
+        await refreshLocalStorage.mutateAsync();
+        toast({
+          title: "Refreshed",
+          description: "LocalStorage reloaded",
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to refresh ${activeTab}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteCookie = async (cookie: BrowserCookie) => {
     try {
       await deleteCookie.mutateAsync(cookie);
@@ -195,8 +249,44 @@ function CookieInspector() {
     }
   };
 
+  const handleDeleteLocalStorageItem = async (key: string) => {
+    try {
+      await deleteLocalStorageItem.mutateAsync(key);
+      toast({
+        title: "Deleted",
+        description: `Deleted localStorage item: ${key}`,
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete localStorage item",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearAllLocalStorage = async () => {
+    try {
+      await clearLocalStorage.mutateAsync();
+      toast({
+        title: "Cleared",
+        description: "All localStorage items cleared",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear localStorage",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Loading state
-  if (cookiesLoading) {
+  const isLoading =
+    activeTab === "cookies" ? cookiesLoading : localStorageLoading;
+  if (isLoading) {
     return (
       <div className="w-[800px] h-[600px] p-6 space-y-4">
         <Skeleton className="h-8 w-full" />
@@ -211,7 +301,7 @@ function CookieInspector() {
   }
 
   // Error state
-  const error = tabError || cookiesError;
+  const error = tabError || cookiesError || localStorageError;
 
   return (
     <TooltipProvider>
@@ -220,7 +310,7 @@ function CookieInspector() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-lg font-bold text-blue-600 dark:text-blue-400">
-              Cookie Inspector
+              Storage Inspector
             </h1>
             <div className="text-xs text-muted-foreground font-mono break-all">
               {currentUrl ? new URL(currentUrl).hostname : "Loading..."}
@@ -240,11 +330,37 @@ function CookieInspector() {
               variant="outline"
               size="sm"
               className="text-xs"
-              disabled={refreshCookies.isPending}
+              disabled={
+                (activeTab === "cookies" && refreshCookies.isPending) ||
+                (activeTab === "localStorage" && refreshLocalStorage.isPending)
+              }
             >
-              {refreshCookies.isPending ? "Refreshing..." : "Refresh"}
+              {(activeTab === "cookies" && refreshCookies.isPending) ||
+              (activeTab === "localStorage" && refreshLocalStorage.isPending)
+                ? "Refreshing..."
+                : "Refresh"}
             </Button>
           </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-1 mb-4 border-b">
+          <Button
+            variant={activeTab === "cookies" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("cookies")}
+            className="text-xs rounded-b-none"
+          >
+            Cookies ({cookies.length})
+          </Button>
+          <Button
+            variant={activeTab === "localStorage" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("localStorage")}
+            className="text-xs rounded-b-none"
+          >
+            LocalStorage ({localStorageItems.length})
+          </Button>
         </div>
 
         {/* Error Display */}
@@ -255,7 +371,7 @@ function CookieInspector() {
         )}
 
         {/* Controls */}
-        <CookieControls
+        <DataControls
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           endpoint={endpoint}
@@ -263,33 +379,63 @@ function CookieInspector() {
           sendResult={sendResult}
           onCopyAll={handleCopyAll}
           onDownload={handleDownload}
-          onSendCookies={handleSendCookies}
-          isSending={sendCookies.isPending}
-          cookiesCount={cookies.length}
-          filteredCount={filteredCookies.length}
+          onSendData={handleSendData}
+          isSending={
+            (activeTab === "cookies" && sendCookies.isPending) ||
+            (activeTab === "localStorage" && sendLocalStorage.isPending)
+          }
+          dataCount={
+            activeTab === "cookies" ? cookies.length : localStorageItems.length
+          }
+          filteredCount={
+            activeTab === "cookies"
+              ? filteredCookies.length
+              : filteredLocalStorage.length
+          }
+          dataType={activeTab}
+          onClearAll={
+            activeTab === "localStorage"
+              ? handleClearAllLocalStorage
+              : undefined
+          }
         />
 
-        {/* Cookie List */}
+        {/* Data List */}
         <div className="space-y-1 max-h-96 overflow-y-auto border rounded bg-background/50">
-          {filteredCookies.length === 0 ? (
+          {activeTab === "cookies" ? (
+            filteredCookies.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground text-xs">
+                {cookies.length === 0
+                  ? "No cookies detected"
+                  : "No matching cookies"}
+              </div>
+            ) : (
+              <CookieList
+                cookies={filteredCookies}
+                onCookieClick={handleItemClick}
+                onCookieDelete={handleDeleteCookie}
+              />
+            )
+          ) : filteredLocalStorage.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground text-xs">
-              {cookies.length === 0
-                ? "No cookies detected"
-                : "No matching cookies"}
+              {localStorageItems.length === 0
+                ? "No localStorage items detected"
+                : "No matching localStorage items"}
             </div>
           ) : (
-            <CookieList
-              cookies={filteredCookies}
-              onCookieClick={handleCookieClick}
-              onCookieDelete={handleDeleteCookie}
+            <LocalStorageList
+              items={filteredLocalStorage}
+              onItemClick={handleItemClick}
+              onItemDelete={handleDeleteLocalStorageItem}
             />
           )}
         </div>
 
         {/* Legend */}
         <div className="mt-2 text-xs text-muted-foreground">
-          Flags: S=Secure, H=HttpOnly, SS=SameSite, T=Session • Click row to
-          copy value • Click × to delete
+          {activeTab === "cookies"
+            ? "Flags: S=Secure, H=HttpOnly, SS=SameSite, T=Session • Click row to copy value • Click × to delete"
+            : "Click row to copy value • Click × to delete item"}
         </div>
       </div>
       <Toaster />

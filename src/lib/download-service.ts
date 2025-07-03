@@ -1,4 +1,4 @@
-import type { BrowserCookie } from "./browser-api";
+import type { BrowserCookie, LocalStorageItem } from "./browser-api";
 
 export class DownloadService {
   static downloadCookies(cookies: BrowserCookie[], url: string): void {
@@ -70,6 +70,60 @@ export class DownloadService {
       );
     } catch (error) {
       throw new Error("Failed to download cookies as JSON");
+    }
+  }
+
+  static downloadLocalStorage(items: LocalStorageItem[], url: string): void {
+    try {
+      const hostname = new URL(url).hostname;
+      const timestamp = new Date().toISOString().split("T")[0];
+
+      // Create a simple text file format for localStorage
+      let content = "# LocalStorage Export\n";
+      content += `# Domain: ${hostname}\n`;
+      content += `# Date: ${new Date().toISOString()}\n\n`;
+
+      items.forEach((item) => {
+        content += `${item.key}=${item.value}\n`;
+      });
+
+      this.downloadFile(
+        content,
+        `localStorage_${hostname}_${timestamp}.txt`,
+        "text/plain"
+      );
+    } catch (error) {
+      throw new Error("Failed to download localStorage");
+    }
+  }
+
+  static downloadLocalStorageAsJson(
+    items: LocalStorageItem[],
+    url: string
+  ): void {
+    try {
+      const hostname = new URL(url).hostname;
+      const timestamp = new Date().toISOString().split("T")[0];
+
+      const data = {
+        url,
+        hostname,
+        timestamp: new Date().toISOString(),
+        localStorage: items.map((item) => ({
+          key: item.key,
+          value: item.value,
+          size: item.size,
+        })),
+      };
+
+      const jsonContent = JSON.stringify(data, null, 2);
+      this.downloadFile(
+        jsonContent,
+        `localStorage_${hostname}_${timestamp}.json`,
+        "application/json"
+      );
+    } catch (error) {
+      throw new Error("Failed to download localStorage as JSON");
     }
   }
 
