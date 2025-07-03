@@ -1,0 +1,100 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Plasmo Chrome Extension - Project Overview
+
+## Quick Start Guide
+
+This is a Chrome extension built with the **Plasmo framework**, featuring:
+- **React** + **TypeScript** for UI components
+- **Tailwind CSS** + **shadcn/ui** for styling
+- **Zustand** for state management
+- **@plasmohq/storage** for persistent data
+- **pnpm** for package management
+
+## Key Files and Structure
+
+### Entry Points
+- [src/popup.tsx](mdc:src/popup.tsx) - Main popup interface
+- [package.json](mdc:package.json) - Project configuration and dependencies
+
+### Configuration Files
+- [components.json](mdc:components.json) - shadcn/ui component configuration
+- [tailwind.config.js](mdc:tailwind.config.js) - Tailwind CSS customization
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript compiler settings
+- [eslint.config.js](mdc:eslint.config.js) - ESLint rules
+
+### Core Directories
+```
+src/
+├── components/ui/       # shadcn/ui component library
+├── lib/utils.ts        # Utility functions (cn, etc.)
+├── main.css           # Global styles and CSS variables
+└── popup.tsx          # Main entry component
+```
+
+## Development Workflow
+
+### Commands
+- `pnpm dev` - Development with hot reload
+- `pnpm build` - Production build
+- `pnpm package` - Create extension package
+
+### Adding New Features
+1. **Components**: Create in `src/components/` using shadcn/ui primitives
+2. **Pages**: Add new entry points like `src/options.tsx`, `src/background.ts`
+3. **Content Scripts**: Add to `src/contents/` directory
+4. **Storage**: Use `@plasmohq/storage` for persistent data
+5. **State**: Create Zustand stores in `src/stores/`
+
+## Rule Reference
+
+For detailed guidelines, refer to these specialized rule files:
+
+1. **[Plasmo Framework](mdc:.cursor/rules/plasmo-framework.mdc)** - Core Plasmo patterns, file routing, development commands
+2. **[Chrome Extension Development](mdc:.cursor/rules/chrome-extension-development.mdc)** - Extension architecture, permissions, security
+3. **[Component Architecture](mdc:.cursor/rules/component-architecture.mdc)** - React patterns, shadcn/ui usage, component organization
+4. **[State and Storage](mdc:.cursor/rules/state-and-storage.mdc)** - Zustand stores, Plasmo Storage, data persistence
+5. **[Styling and UI](mdc:.cursor/rules/styling-and-ui.mdc)** - Tailwind CSS patterns, design system, animations
+6. **[TypeScript Patterns](mdc:.cursor/rules/typescript-patterns.mdc)** - Type definitions, interfaces, best practices
+
+## Common Patterns
+
+### Import Style
+```typescript
+// Always use ~ prefix for local imports
+import { Button } from "~components/ui/button"
+import { cn } from "~lib/utils"
+import "~main.css"
+```
+
+### Component Structure
+```typescript
+interface Props {
+  // Define props with TypeScript
+}
+
+export function Component({ ...props }: Props) {
+  return (
+    <div className={cn("base-classes", conditionalClasses)}>
+      {/* Use shadcn/ui components */}
+    </div>
+  )
+}
+```
+
+### Storage Usage
+```typescript
+import { useStorage } from "@plasmohq/storage/hook"
+
+const [value, setValue] = useStorage("key", defaultValue)
+```
+
+## Next Steps
+
+1. Review the specific rule files for detailed patterns
+2. Explore the existing component structure in `src/components/ui/`
+3. Check [package.json](mdc:package.json) for available dependencies
+4. Start development with `pnpm dev`

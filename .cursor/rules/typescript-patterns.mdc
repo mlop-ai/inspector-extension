@@ -1,0 +1,218 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# TypeScript Development Patterns
+
+## Configuration
+
+TypeScript is configured in [tsconfig.json](mdc:tsconfig.json) with extension-specific settings. The project uses strict type checking.
+
+## Type Definitions
+
+### Chrome Extension Types
+```typescript
+// Use @types/chrome for Chrome API types
+declare global {
+  interface Window {
+    chrome: typeof chrome
+  }
+}
+
+// Extension-specific types
+interface ExtensionMessage {
+  type: string
+  payload?: any
+}
+
+interface StorageData {
+  [key: string]: any
+}
+```
+
+### Component Props Types
+```typescript
+// Component prop interfaces
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  size?: 'default' | 'sm' | 'lg' | 'icon'
+}
+
+// Generic component patterns
+interface ListProps<T> {
+  items: T[]
+  renderItem: (item: T) => React.ReactNode
+  onItemClick?: (item: T) => void
+}
+```
+
+### Zustand Store Types
+```typescript
+// Store state interfaces
+interface AppState {
+  // State properties
+  user: User | null
+  settings: Settings
+  isLoading: boolean
+  
+  // Action types
+  setUser: (user: User | null) => void
+  updateSettings: (settings: Partial<Settings>) => void
+  setLoading: (loading: boolean) => void
+}
+
+// Store creator type
+export const useAppStore = create<AppState>((set, get) => ({
+  // Implementation
+}))
+```
+
+## Utility Types
+
+### Common Pattern Types
+```typescript
+// API response wrapper
+interface ApiResponse<T> {
+  data?: T
+  error?: string
+  success: boolean
+}
+
+// Event handler types
+type EventHandler<T = void> = (data: T) => void | Promise<void>
+
+// Storage key mapping
+type StorageKeys = {
+  settings: Settings
+  userPreferences: UserPreferences
+  cache: CacheData
+}
+
+// Form state types
+interface FormState<T> {
+  values: T
+  errors: Partial<Record<keyof T, string>>
+  isSubmitting: boolean
+}
+```
+
+## Import/Export Patterns
+
+### Module Organization
+```typescript
+// Barrel exports from feature modules
+// src/components/index.ts
+export { Button } from './ui/button'
+export { Card, CardHeader, CardContent } from './ui/card'
+export { FeatureComponent } from './features/feature-component'
+
+// Named exports for utilities
+// src/lib/utils.ts
+export { cn } from './cn'
+export { formatDate } from './date'
+export type { DateFormat } from './date'
+```
+
+### Import Conventions
+```typescript
+// Use ~ prefix for local imports
+import { Button } from "~components/ui/button"
+import { useAppStore } from "~stores/app-store"
+import { cn } from "~lib/utils"
+
+// Group imports by type
+import React, { useState, useEffect } from "react"
+import { Chrome } from "lucide-react"
+
+import { Storage } from "@plasmohq/storage"
+import { sendToBackground } from "@plasmohq/messaging"
+
+import { Button } from "~components/ui/button"
+import { useAppStore } from "~stores/app-store"
+```
+
+## Error Handling Types
+
+### Error Boundaries
+```typescript
+interface ErrorInfo {
+  componentStack: string
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean
+  error?: Error
+}
+
+class ErrorBoundary extends React.Component<
+  React.PropsWithChildren<{}>,
+  ErrorBoundaryState
+> {
+  // Implementation
+}
+```
+
+### Async Error Handling
+```typescript
+// Result type for error handling
+type Result<T, E = Error> = 
+  | { success: true; data: T }
+  | { success: false; error: E }
+
+// Async operation wrapper
+async function safeAsync<T>(
+  operation: () => Promise<T>
+): Promise<Result<T>> {
+  try {
+    const data = await operation()
+    return { success: true, data }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error : new Error(String(error))
+    }
+  }
+}
+```
+
+## Generic Patterns
+
+### Hook Types
+```typescript
+// Custom hook return types
+interface UseStorageReturn<T> {
+  value: T
+  setValue: (value: T) => void
+  loading: boolean
+  error: Error | null
+}
+
+function useStorage<T>(key: string, defaultValue: T): UseStorageReturn<T> {
+  // Implementation
+}
+```
+
+### Event System Types
+```typescript
+// Type-safe event emitter
+type EventMap = {
+  'user:login': { user: User }
+  'settings:update': { settings: Settings }
+  'error': { error: Error }
+}
+
+interface TypedEventEmitter<T extends Record<string, any>> {
+  emit<K extends keyof T>(event: K, data: T[K]): void
+  on<K extends keyof T>(event: K, handler: (data: T[K]) => void): void
+}
+```
+
+## Best Practices
+
+1. **Strict Types**: Avoid `any`, use `unknown` when necessary
+2. **Utility Types**: Leverage TypeScript utility types (`Partial`, `Pick`, `Omit`)
+3. **Generics**: Use generics for reusable components and functions
+4. **Type Guards**: Implement type guards for runtime type checking
+5. **Interface Segregation**: Keep interfaces focused and composable
+6. **Nominal Typing**: Use branded types for IDs and special values

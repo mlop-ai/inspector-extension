@@ -1,0 +1,151 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Styling and UI Guidelines
+
+## Tailwind CSS Configuration
+
+Tailwind is configured in [tailwind.config.js](mdc:tailwind.config.js) with custom theme extensions. Main styles are imported in [src/main.css](mdc:src/main.css).
+
+### Class Utility Function
+
+Always use the `cn` utility from [src/lib/utils.ts](mdc:src/lib/utils.ts) for conditional classes:
+
+```typescript
+import { cn } from "~lib/utils"
+
+// Conditional classes
+<div className={cn(
+  "base-classes",
+  isActive && "active-classes",
+  variant === "primary" && "primary-classes"
+)} />
+
+// With shadcn/ui variants
+<Button className={cn("additional-classes", className)} />
+```
+
+## Design System
+
+### Color Palette
+Use CSS variables defined in [src/main.css](mdc:src/main.css):
+- `background` / `foreground` - Base colors
+- `primary` / `primary-foreground` - Primary actions
+- `secondary` / `secondary-foreground` - Secondary actions
+- `muted` / `muted-foreground` - Subtle elements
+- `destructive` / `destructive-foreground` - Danger states
+- `border` - Borders and dividers
+
+### Typography Scale
+- `text-xs` (12px) - Captions, labels
+- `text-sm` (14px) - Body text, default
+- `text-base` (16px) - Emphasized body
+- `text-lg` (18px) - Subheadings
+- `text-xl` (20px) - Headings
+- `text-2xl` (24px) - Page titles
+
+### Spacing System
+Follow the 4px grid system:
+- `space-1` (4px), `space-2` (8px), `space-3` (12px)
+- `space-4` (16px), `space-6` (24px), `space-8` (32px)
+
+## Component Styling Patterns
+
+### Layout Components
+```typescript
+// Container with consistent padding
+<div className="p-4 space-y-4">
+  {/* Content */}
+</div>
+
+// Flex layouts
+<div className="flex items-center justify-between">
+  <span>Label</span>
+  <Button size="sm">Action</Button>
+</div>
+
+// Grid layouts
+<div className="grid grid-cols-2 gap-4">
+  {/* Grid items */}
+</div>
+```
+
+### Interactive States
+```typescript
+// Hover effects
+<button className="hover:bg-muted transition-colors">
+  Hover me
+</button>
+
+// Focus states
+<input className="focus:ring-2 focus:ring-primary focus:ring-offset-2" />
+
+// Disabled states
+<Button disabled className="disabled:opacity-50 disabled:cursor-not-allowed">
+  Disabled
+</Button>
+```
+
+### Responsive Design for Extensions
+
+Since extensions have constrained viewport:
+```typescript
+// Compact layouts
+<div className="flex flex-col space-y-2">
+  {/* Vertical stacking */}
+</div>
+
+// Horizontal space efficiency
+<div className="flex items-center space-x-2 text-sm">
+  {/* Compact horizontal layout */}
+</div>
+```
+
+## Animation and Transitions
+
+Use Tailwind's built-in animations:
+```typescript
+// Loading spinners
+<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+
+// Fade animations
+<div className="animate-in fade-in-0 duration-200">
+  {/* Fading content */}
+</div>
+
+// Slide animations with tailwindcss-animate
+<div className="animate-in slide-in-from-top-2 duration-300">
+  {/* Sliding content */}
+</div>
+```
+
+## Dark Mode Support
+
+The project supports automatic dark mode via CSS variables:
+```typescript
+// Colors automatically adapt
+<div className="bg-background text-foreground">
+  {/* Adapts to light/dark mode */}
+</div>
+
+// Manual dark mode variants if needed
+<div className="bg-white dark:bg-gray-900">
+  {/* Explicit dark mode handling */}
+</div>
+```
+
+## Performance Considerations
+
+1. **CSS Purging**: Tailwind automatically purges unused classes in production
+2. **Class Merging**: Use `cn()` to merge classes efficiently
+3. **Avoid Inline Styles**: Prefer Tailwind classes over inline styles
+4. **Component Variants**: Use `class-variance-authority` for component variants
+
+## Accessibility
+
+1. **Color Contrast**: Use semantic color tokens for proper contrast
+2. **Focus Indicators**: Ensure all interactive elements have focus styles
+3. **Screen Readers**: Use semantic HTML and ARIA attributes
+4. **Keyboard Navigation**: Test keyboard navigation in popup context

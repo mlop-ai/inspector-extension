@@ -1,0 +1,64 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Plasmo Framework Development Guide
+
+## Project Structure
+
+This Chrome extension uses the [Plasmo framework](mdc:https:/www.plasmo.com) with the following key files:
+- [package.json](mdc:package.json) - Main configuration with Plasmo scripts and dependencies
+- [src/popup.tsx](mdc:src/popup.tsx) - Main popup component (entry point)
+- [tailwind.config.js](mdc:tailwind.config.js) - Tailwind CSS configuration
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript configuration
+
+## Plasmo Conventions
+
+### File-based Routing and Entry Points
+- **Popup**: `src/popup.tsx` - The main popup interface
+- **Background Scripts**: `src/background.ts` or `src/background/index.ts`
+- **Content Scripts**: `src/contents/*.ts` for content script injection
+- **Options Page**: `src/options.tsx` for extension options
+- **New Tab**: `src/newtab.tsx` for custom new tab page
+- **DevTools**: `src/devtools.tsx` for DevTools panel
+
+### Plasmo-specific Features
+- Use `~` prefix for importing local files: `import "~main.css"`
+- Use `@plasmohq/storage` for persistent storage across extension contexts
+- Use `@plasmohq/messaging` for communication between different extension contexts
+- Environment variables with `process.env.PLASMO_PUBLIC_*` for public vars
+
+### Development Commands
+- `pnpm dev` - Start development server with hot reload
+- `pnpm build` - Build for production
+- `pnpm package` - Create distribution package
+
+### Content Script Patterns
+```typescript
+import type { PlasmoCSConfig } from "plasmo"
+
+export const config: PlasmoCSConfig = {
+  matches: ["https://*/*"],
+  all_frames: true
+}
+
+// Content script logic here
+```
+
+### Background Script Patterns
+```typescript
+import { Storage } from "@plasmohq/storage"
+
+const storage = new Storage()
+
+// Background script logic here
+```
+
+## Best Practices
+
+1. **Imports**: Always use the `~` prefix for local imports
+2. **Types**: Use Plasmo-provided types like `PlasmoCSConfig`, `PlasmoMessaging`
+3. **Storage**: Prefer `@plasmohq/storage` over Chrome's storage API directly
+4. **Messaging**: Use `@plasmohq/messaging` for cross-context communication
+5. **Manifest**: Configure permissions in [package.json](mdc:package.json) under `manifest` key

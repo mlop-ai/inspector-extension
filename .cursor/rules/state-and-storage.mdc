@@ -1,0 +1,154 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# State Management and Storage Guide
+
+## Zustand State Management
+
+This project uses Zustand for global state management. Create stores in `src/stores/` directory.
+
+### Store Patterns
+
+#### Basic Store Structure
+```typescript
+import { create } from 'zustand'
+
+interface StoreState {
+  // State properties
+  items: Item[]
+  isLoading: boolean
+  
+  // Actions
+  addItem: (item: Item) => void
+  removeItem: (id: string) => void
+  setLoading: (loading: boolean) => void
+}
+
+export const useStore = create<StoreState>((set, get) => ({
+  items: [],
+  isLoading: false,
+  
+  addItem: (item) => set((state) => ({ 
+    items: [...state.items, item] 
+  })),
+  
+  removeItem: (id) => set((state) => ({
+    items: state.items.filter(item => item.id !== id)
+  })),
+  
+  setLoading: (isLoading) => set({ isLoading })
+}))
+```
+
+#### Using Stores in Components
+```typescript
+import { useStore } from "~stores/main-store"
+
+export function Component() {
+  const { items, isLoading, addItem } = useStore()
+  
+  return (
+    <div>
+      {items.map(item => (
+        <div key={item.id}>{item.name}</div>
+      ))}
+    </div>
+  )
+}
+```
+
+## Plasmo Storage Integration
+
+Use `@plasmohq/storage` for persistent data across extension contexts.
+
+### Storage Patterns
+
+#### Basic Storage Setup
+```typescript
+import { Storage } from "@plasmohq/storage"
+
+const storage = new Storage({
+  area: "local" // or "sync" for cross-device sync
+})
+
+// Store data
+await storage.set("key", value)
+
+// Retrieve data
+const value = await storage.get("key")
+
+// Watch for changes
+storage.watch({
+  "key": (c) => {
+    console.log("Key changed:", c.newValue)
+  }
+})
+```
+
+#### React Hook for Storage
+```typescript
+import { useStorage } from "@plasmohq/storage/hook"
+
+export function Component() {
+  const [value, setValue] = useStorage("key", "defaultValue")
+  
+  return (
+    <input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+    />
+  )
+}
+```
+
+### Combining Zustand with Storage
+
+#### Persistent Store Pattern
+```typescript
+import { create } from 'zustand'
+import { Storage } from "@plasmohq/storage"
+
+const storage = new Storage()
+
+interface PersistentState {
+  settings: Settings
+  updateSettings: (settings: Partial<Settings>) => void
+}
+
+export const useSettingsStore = create<PersistentState>((set, get) => ({
+  settings: {},
+  
+  updateSettings: async (newSettings) => {
+    const updated = { ...get().settings, ...newSettings }
+    set({ settings: updated })
+    await storage.set("settings", updated)
+  }
+}))
+
+// Initialize store from storage
+storage.get("settings").then((settings) => {
+  if (settings) {
+    useSettingsStore.setState({ settings })
+  }
+})
+```
+
+## Storage Best Practices
+
+1. **Storage Areas**:
+   - `local`: Device-specific storage (larger quota)
+   - `sync`: Cross-device sync (smaller quota, 100KB limit)
+
+2. **Data Validation**: Always validate data retrieved from storage
+3. **Error Handling**: Handle storage errors gracefully
+4. **Storage Limits**: Be mindful of storage quotas
+5. **Performance**: Batch storage operations when possible
+
+## State Architecture Guidelines
+
+1. **Local vs Global**: Keep UI state local, business logic global
+2. **Persistence**: Use storage for data that should survive extension restarts
+3. **Context Sharing**: Use storage for sharing state between extension contexts
+4. **Reactivity**: Use Zustand subscriptions for reactive updates
