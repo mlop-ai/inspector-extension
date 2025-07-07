@@ -46,21 +46,21 @@ export function DataControls({
         : "Export Requests";
 
   return (
-    <div className="space-y-3 mb-4">
+    <div className="space-y-2 mb-3">
       {/* Search and Actions */}
       <div className="flex gap-2">
         <Input
           placeholder={`Filter ${dataLabel}...`}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="flex-1 font-mono text-xs bg-background"
+          className="flex-1 font-mono text-xs bg-background h-7"
         />
         {dataType !== "webRequests" && (
           <Button
             onClick={onCopyAll}
             variant="outline"
             size="sm"
-            className="text-xs"
+            className="text-xs h-7 px-2"
           >
             Copy All
           </Button>
@@ -70,7 +70,7 @@ export function DataControls({
             onClick={onDownload}
             variant="outline"
             size="sm"
-            className="text-xs"
+            className="text-xs h-7 px-2"
           >
             Download
           </Button>
@@ -81,31 +81,13 @@ export function DataControls({
               onClick={onClearAll}
               variant="outline"
               size="sm"
-              className="text-xs text-red-500 hover:text-red-700"
+              className="text-xs h-7 px-2 text-red-500 hover:text-red-700"
             >
               Clear All
             </Button>
           )}
       </div>
 
-      {/* HTTP Endpoint */}
-      {/* <div className="flex gap-2">
-        <Input
-          placeholder="HTTP endpoint URL..."
-          value={endpoint}
-          onChange={(e) => onEndpointChange(e.target.value)}
-          className="flex-1 font-mono text-xs bg-background"
-        />
-        <Button
-          onClick={onSendData}
-          disabled={isSending || !endpoint}
-          variant="default"
-          size="sm"
-          className="text-xs bg-blue-600 hover:bg-blue-700"
-        >
-          {isSending ? "Sending..." : actionLabel}
-        </Button>
-      </div> */}
 
       {/* Send Result */}
       {sendResult && (

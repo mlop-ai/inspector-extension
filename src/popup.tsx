@@ -4,13 +4,6 @@ import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { Button } from "~components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~components/ui/card";
 import { Input } from "~components/ui/input";
 import { Skeleton } from "~components/ui/skeleton";
 import { Toaster } from "~components/ui/toaster";
@@ -356,7 +349,7 @@ function CookieInspector() {
         : webRequestsLoading;
   if (isLoading) {
     return (
-      <div className="w-[1200px] h-[800px] p-6 space-y-4">
+      <div className="w-full max-w-[1200px] min-w-[800px] h-[800px] p-6 space-y-4">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <div className="space-y-2">
@@ -374,23 +367,23 @@ function CookieInspector() {
 
   return (
     <TooltipProvider>
-      <div className="w-[800px] h-[600px] p-6 bg-background text-foreground font-mono text-sm">
+      <div className="w-full max-w-[1200px] min-w-[800px] h-[800px] p-4 bg-background text-foreground font-mono text-sm flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-lg font-bold text-blue-600 dark:text-blue-400">
+        <div className="flex items-center justify-between mb-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-bold text-blue-600 dark:text-blue-400">
               Storage Inspector
             </h1>
-            <div className="text-xs text-muted-foreground font-mono break-all">
+            <div className="text-xs text-muted-foreground font-mono truncate">
               {currentUrl ? new URL(currentUrl).hostname : "Loading..."}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={toggleDarkMode}
-              className="text-xs"
+              className="text-xs h-7 w-7 p-0"
             >
               {darkMode ? "☀️" : "🌙"}
             </Button>
@@ -398,7 +391,7 @@ function CookieInspector() {
               onClick={handleRefresh}
               variant="outline"
               size="sm"
-              className="text-xs"
+              className="text-xs h-7 px-2"
               disabled={
                 (activeTab === "cookies" && refreshCookies.isPending) ||
                 (activeTab === "localStorage" &&
@@ -416,12 +409,12 @@ function CookieInspector() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-4 border-b">
+        <div className="flex gap-1 mb-3 border-b">
           <Button
             variant={activeTab === "cookies" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("cookies")}
-            className="text-xs rounded-b-none"
+            className="text-xs rounded-b-none h-7"
           >
             Cookies ({cookies.length})
           </Button>
@@ -429,7 +422,7 @@ function CookieInspector() {
             variant={activeTab === "localStorage" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("localStorage")}
-            className="text-xs rounded-b-none"
+            className="text-xs rounded-b-none h-7"
           >
             LocalStorage ({localStorageItems.length})
           </Button>
@@ -437,7 +430,7 @@ function CookieInspector() {
             variant={activeTab === "webRequests" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("webRequests")}
-            className="text-xs rounded-b-none"
+            className="text-xs rounded-b-none h-7"
           >
             Requests ({webRequests.length})
           </Button>
@@ -445,7 +438,7 @@ function CookieInspector() {
 
         {/* Error Display */}
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded text-red-400 text-xs">
+          <div className="mb-3 p-2 bg-red-500/20 border border-red-500 rounded text-red-400 text-xs">
             Error: {error.message}
           </div>
         )}
@@ -499,7 +492,7 @@ function CookieInspector() {
         )}
 
         {/* Data List */}
-        <div className="space-y-1 max-h-[500px] overflow-y-auto border rounded bg-background/50">
+        <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden border rounded bg-background/50 min-h-0">
           {activeTab === "cookies" ? (
             filteredCookies.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-xs">
@@ -543,12 +536,12 @@ function CookieInspector() {
         </div>
 
         {/* Legend */}
-        <div className="mt-2 text-xs text-muted-foreground">
+        <div className="mt-2 text-xs text-muted-foreground flex-shrink-0">
           {activeTab === "cookies"
             ? "Flags: S=Secure, H=HttpOnly, SS=SameSite, T=Session • Click row to copy value • Click × to delete"
             : activeTab === "localStorage"
               ? "Click row to copy value • Click × to delete item"
-              : "Filter by type above • Click + to expand and see request/response details • Click row to copy URL • Status codes: 2xx=Success, 3xx=Redirect, 4xx/5xx=Error"}
+              : "Filter by type above • Click row to expand and see request/response details • Status codes: 2xx=Success, 3xx=Redirect, 4xx/5xx=Error"}
         </div>
       </div>
       <Toaster />

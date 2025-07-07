@@ -3,3 +3,75 @@ description:
 globs:
 alwaysApply: false
 ---
+# Chrome Extension Development Guide
+
+## Extension Architecture
+
+### Manifest Configuration
+Configure extension permissions and properties in [package.json](mdc:package.json):
+```json
+{
+  "manifest": {
+    "host_permissions": ["https://*/*"],
+    "permissions": ["storage", "activeTab"],
+    "action": {
+      "default_popup": "popup.html"
+    }
+  }
+}
+```
+
+### Context Types and Communication
+
+1. **Popup Context** - [src/popup.tsx](mdc:src/popup.tsx)
+   - Temporary UI, closes when user clicks away
+   - Limited lifecycle, data should be persisted
+   - Use for quick actions and settings
+
+2. **Background Context** - `src/background.ts`
+   - Persistent service worker
+   - Handles events, API calls, and cross-tab communication
+   - Use for long-running processes
+
+3. **Content Script Context** - `src/contents/*.ts`
+   - Runs in web page context
+   - Can access and modify DOM
+   - Limited Chrome API access
+
+4. **Options/Settings Context** - `src/options.tsx`
+   - Full-page settings interface
+   - Persistent across sessions
+
+### Permission Best Practices
+
+1. **Minimal Permissions**: Only request permissions you actively use
+2. **Host Permissions**: Be specific about which sites you need access to
+3. **Optional Permissions**: Use `chrome.permissions.request()` for user-initiated features
+4. **Storage Permissions**: Always include if using `@plasmohq/storage`
+
+### Security Considerations
+
+1. **Content Security Policy**: Avoid `eval()` and inline scripts
+2. **Sanitization**: Always sanitize user input and data from web pages
+3. **HTTPS**: Prefer HTTPS APIs and resources
+4. **Minimal Scope**: Limit content script injection to necessary pages only
+
+### Chrome APIs Integration
+
+```typescript
+// Prefer Plasmo abstractions when available
+import { Storage } from "@plasmohq/storage"
+import { sendToBackground } from "@plasmohq/messaging"
+
+// Direct Chrome API when needed
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  // Handle active tab
+})
+```
+
+### Error Handling and Debugging
+
+1. **Console Logging**: Different contexts have separate console outputs
+2. **Error Boundaries**: Wrap components in error boundaries
+3. **Storage Validation**: Always validate stored data format
+4. **Network Failures**: Handle API failures gracefully

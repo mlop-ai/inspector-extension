@@ -3,3 +3,102 @@ description:
 globs:
 alwaysApply: false
 ---
+# Component Architecture Guide
+
+## shadcn/ui Integration
+
+This project uses shadcn/ui components configured in [components.json](mdc:components.json). All UI components are located in `src/components/ui/`:
+
+- [src/components/ui/button.tsx](mdc:src/components/ui/button.tsx) - Button variants
+- [src/components/ui/card.tsx](mdc:src/components/ui/card.tsx) - Card layouts
+- [src/components/ui/dialog.tsx](mdc:src/components/ui/dialog.tsx) - Modal dialogs
+- [src/components/ui/input.tsx](mdc:src/components/ui/input.tsx) - Form inputs
+- [src/components/ui/checkbox.tsx](mdc:src/components/ui/checkbox.tsx) - Checkboxes
+- [src/components/ui/tooltip.tsx](mdc:src/components/ui/tooltip.tsx) - Tooltips
+- [src/components/ui/skeleton.tsx](mdc:src/components/ui/skeleton.tsx) - Loading states
+
+## Component Organization
+
+### File Structure
+```
+src/
+├── components/
+│   ├── ui/              # shadcn/ui primitives
+│   └── features/        # Feature-specific components
+├── lib/
+│   └── utils.ts         # Utility functions including cn()
+└── popup.tsx           # Main entry component
+```
+
+### Component Patterns
+
+#### Basic Component Structure
+```typescript
+interface ComponentProps {
+  // Props definition
+}
+
+export function Component({ ...props }: ComponentProps) {
+  return (
+    <div className="...">
+      {/* Component JSX */}
+    </div>
+  )
+}
+```
+
+#### Using shadcn/ui Components
+```typescript
+import { Button } from "~components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "~components/ui/card"
+import { cn } from "~lib/utils"
+
+export function FeatureComponent() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Feature Title</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button variant="default" size="sm">
+          Action
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### Component Guidelines
+
+1. **Import Paths**: Use `~` prefix for all local imports
+2. **Styling**: Use the `cn()` utility from [src/lib/utils.ts](mdc:src/lib/utils.ts) for conditional classes
+3. **Props**: Define TypeScript interfaces for all component props
+4. **Composition**: Prefer composition over complex prop drilling
+5. **Reusability**: Create feature-specific components in `src/components/`
+
+### State Management in Components
+
+1. **Local State**: Use `useState` for component-local state
+2. **Global State**: Use Zustand stores for cross-component state
+3. **Extension Storage**: Use `@plasmohq/storage` for persistent state
+4. **Forms**: Consider react-hook-form for complex forms
+
+### Icon Usage
+
+Use Lucide React icons consistently:
+```typescript
+import { Settings, Download, Trash2 } from "lucide-react"
+
+<Button>
+  <Settings className="h-4 w-4 mr-2" />
+  Settings
+</Button>
+```
+
+### Responsive Design
+
+Popup dimensions are constrained, design for:
+- Width: 350-400px typical
+- Height: Variable, avoid fixed heights
+- Use flex layouts for responsive content

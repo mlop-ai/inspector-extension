@@ -26,14 +26,14 @@ export function CookieList({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 overflow-x-hidden">
       {/* Header */}
-      <div className="sticky top-0 bg-muted p-2 text-xs font-bold border-b grid grid-cols-12 gap-2">
-        <div className="col-span-3">Name</div>
-        <div className="col-span-4">Value</div>
-        <div className="col-span-2">Domain</div>
-        <div className="col-span-2">Flags</div>
-        <div className="col-span-1">Actions</div>
+      <div className="sticky top-0 bg-muted p-2 text-xs font-bold border-b grid grid-cols-12 gap-2 min-w-0">
+        <div className="col-span-3 truncate">Name</div>
+        <div className="col-span-4 truncate">Value</div>
+        <div className="col-span-2 truncate">Domain</div>
+        <div className="col-span-2 truncate">Flags</div>
+        <div className="col-span-1 truncate">Actions</div>
       </div>
 
       {/* Cookie Rows */}
@@ -56,18 +56,27 @@ interface CookieRowProps {
 }
 
 function CookieRow({ cookie, onClick, onDelete }: CookieRowProps) {
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on the delete button
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    onClick();
+  };
+
   return (
-    <div className="p-2 text-xs border-b hover:bg-accent/50 grid grid-cols-12 gap-2 items-center">
+    <div 
+      className="p-2 text-xs border-b hover:bg-accent/50 grid grid-cols-12 gap-2 items-center cursor-pointer transition-colors min-w-0"
+      onClick={handleRowClick}
+    >
       <div
-        className="col-span-3 font-semibold text-blue-600 dark:text-blue-400 break-all cursor-pointer"
-        onClick={onClick}
+        className="col-span-3 font-semibold text-blue-600 dark:text-blue-400 break-all"
         title="Click to copy value"
       >
         {cookie.name}
       </div>
       <div
-        className="col-span-4 break-all text-muted-foreground cursor-pointer"
-        onClick={onClick}
+        className="col-span-4 break-all text-muted-foreground"
         title="Click to copy value"
       >
         {cookie.value.length > 60
@@ -75,8 +84,7 @@ function CookieRow({ cookie, onClick, onDelete }: CookieRowProps) {
           : cookie.value || "(empty)"}
       </div>
       <div
-        className="col-span-2 text-muted-foreground truncate cursor-pointer"
-        onClick={onClick}
+        className="col-span-2 text-muted-foreground truncate"
         title={`${cookie.domain} - Click to copy value`}
       >
         {cookie.domain}
@@ -84,7 +92,7 @@ function CookieRow({ cookie, onClick, onDelete }: CookieRowProps) {
       <div className="col-span-2 space-x-1">
         <CookieFlags cookie={cookie} />
       </div>
-      <div className="col-span-1">
+      <div className="col-span-1" onClick={(e) => e.stopPropagation()}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

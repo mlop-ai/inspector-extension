@@ -70,7 +70,7 @@ export function WebRequestTypeFilters({
   });
 
   return (
-    <div className="mb-3 p-3 bg-muted/30 rounded border">
+    <div className="mb-2 p-2 bg-muted/30 rounded border">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-semibold text-muted-foreground">
           Filter by Type:
