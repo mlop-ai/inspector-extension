@@ -1,42 +1,59 @@
-# plasmo-tailwindcss-shadcn-template
+# Inspector
 
-A chrome extension template using 
-- [Plasmo](https://docs.plasmo.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Shadcn/ui](https://ui.shadcn.com/)
+A browser extension for inspecting and managing web storage data (cookies, localStorage, web requests) with export capabilities.
 
-## Getting Started
+![Extension Screenshot](assets/icon.png)
 
-First, run the development server:
+## Features
 
-```bash
-pnpm dev
-# or
-npm run dev
-```
+- **Cookie Management**: View, copy, delete, and export cookies
+- **LocalStorage**: Inspect and manage localStorage items with size info
+- **Web Requests**: Real-time HTTP/HTTPS request monitoring with filtering
+- **Export Options**: Download files, send to APIs, copy to clipboard
+- **Cross-Browser**: Works on Chrome and Firefox (Manifest V3)
+- **Modern UI**: Dark/light mode, responsive design, toast notifications
 
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
+## Installation
 
-## Making production build
-
-Run the following:
+### Development
 
 ```bash
+# Install dependencies
+pnpm install
+
+# Build for Chrome
 pnpm build
-# or
-npm run build
+
+# Build for Firefox  
+pnpm build:firefox
+
+# Development with hot reload
+pnpm dev           # Chrome
+pnpm dev:firefox   # Firefox
 ```
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+### Load Extension
 
-## Feature
+- **Chrome**: `chrome://extensions/` → Load unpacked → `build/chrome-mv3-prod/`
+- **Firefox**: `about:debugging` → Load Temporary Add-on → `build/firefox-mv3-prod/manifest.json`
 
-plasmo + shadcn + tailwindcss
+## Tech Stack
 
+- [Plasmo](https://docs.plasmo.com/) - Extension framework
+- React 19 + TypeScript
+- Tailwind CSS + shadcn/ui
+- Zustand + React Query
 
-## Adding shadcn components
+## Permissions
 
-```
-pnpm dlx shadcn@latest add #name
-e.g. pnpm dlx shadcn@latest add card
-```
+- `cookies` - Read/write cookies
+- `activeTab` - Current tab access
+- `webRequest` - Monitor network requests
+- `scripting` - LocalStorage access via content scripts
+
+## Use Cases
+
+- **Developers**: Debug sessions, API testing, storage inspection
+- **Security**: Cookie analysis, request monitoring
+- **QA**: State management, cross-browser testing
+
