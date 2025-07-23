@@ -1,12 +1,7 @@
 import { useState } from "react";
-import type { WebRequest } from "~lib/browser-api";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~components/ui/tooltip";
-import { Button } from "~components/ui/button";
 import { InteractiveFlameGraph } from "~components/interactive-flamegraph";
+import { Button } from "~components/ui/button";
+import type { WebRequest } from "~lib/browser-api";
 
 interface WebRequestListProps {
   requests: WebRequest[];
@@ -174,7 +169,7 @@ function RequestDetails({ request }: { request: WebRequest }) {
               </div>
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>0ms</span>
-                <span className="font-mono">{request.duration}ms</span>
+                <span>{request.duration}ms</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-xs">
@@ -353,43 +348,43 @@ function WebRequestRow({
             </div>
           </div>
           <div
-            className={`col-span-1 font-mono text-xs ${getStatusColor(request.status)}`}
+            className={`col-span-1 text-xs ${getStatusColor(request.status)}`}
             title={`Status: ${request.status || "Error"}`}
           >
             {request.status || "ERR"}
           </div>
           <div
-            className={`col-span-1 font-mono text-xs ${getMethodColor(request.method)}`}
+            className={`col-span-1 text-xs ${getMethodColor(request.method)}`}
             title={`Method: ${request.method}`}
           >
             {request.method}
           </div>
           <div
-            className="col-span-4 break-all text-foreground font-mono text-xs"
+            className="col-span-4 break-all text-foreground text-xs"
             title={request.url}
           >
             {formatUrl(request.url)}
           </div>
           <div
-            className={`col-span-2 ${getTypeColor(request.type)} text-xs font-mono`}
+            className={`col-span-2 ${getTypeColor(request.type)} text-xs`}
             title={`Type: ${request.type}`}
           >
             {request.type}
           </div>
           <div
-            className="col-span-1 text-muted-foreground text-xs font-mono text-right"
+            className="col-span-1 text-muted-foreground text-xs text-right"
             title={`Size: ${formatSize(request.size)}`}
           >
             {formatSize(request.size)}
           </div>
           <div
-            className="col-span-1 text-muted-foreground text-xs font-mono text-right"
+            className="col-span-1 text-muted-foreground text-xs text-right"
             title={`Duration: ${formatDuration(request.duration)}`}
           >
             {formatDuration(request.duration)}
           </div>
           <div
-            className="col-span-1 text-muted-foreground text-xs font-mono text-right"
+            className="col-span-1 text-muted-foreground text-xs text-right"
             title={`Age: ${formatAge(request.timestamp)}`}
           >
             {formatAge(request.timestamp)}

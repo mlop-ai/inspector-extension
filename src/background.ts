@@ -3,22 +3,34 @@
  * Handles extension initialization and maintains proper API compatibility
  */
 
+// Firefox browser API type declaration
+declare const browser: typeof chrome;
+
 // Cross-browser API compatibility
 const browserAPI = (() => {
+  console.log("Background: Detecting browser environment...");
+  
   if (typeof chrome !== "undefined" && chrome.runtime) {
+    console.log("Background: Using Chrome API");
     return chrome;
   }
-  if (
-    typeof (globalThis as any).browser !== "undefined" &&
-    (globalThis as any).browser.runtime
-  ) {
+  
+  if (typeof browser !== "undefined" && browser.runtime) {
+    console.log("Background: Using Firefox browser API (global)");
+    return browser;
+  }
+  
+  if (typeof (globalThis as any).browser !== "undefined" && (globalThis as any).browser.runtime) {
+    console.log("Background: Using Firefox browser API (globalThis)");
     return (globalThis as any).browser;
   }
+  
+  console.error("Background: Browser extension API not available");
   return null;
 })();
 
 if (!browserAPI) {
-  console.error("Browser extension API not available");
+  console.error("Background: Browser extension API not available");
 }
 
 // Extension installation/startup handler
@@ -43,11 +55,13 @@ if (browserAPI?.action) {
   // Manifest V3 - Chrome/Edge
   browserAPI.action.onClicked.addListener(() => {
     // Action handled by popup
+    console.log("Background: Action clicked (Chrome MV3)");
   });
 } else if (browserAPI?.browserAction) {
   // Manifest V2 fallback - Firefox
   browserAPI.browserAction.onClicked.addListener(() => {
     // Action handled by popup
+    console.log("Background: Browser action clicked (Firefox MV2)");
   });
 }
 
@@ -76,42 +90,50 @@ const requestStartTimes = new Map<string, number>();
 
 // Listen to web requests
 if (browserAPI?.webRequest) {
+  console.log("Background: Setting up webRequest listeners...");
+  
   // Capture request start
   browserAPI.webRequest.onBeforeRequest.addListener(
     (details) => {
-      requestStartTimes.set(details.requestId, Date.now());
+      try {
+        requestStartTimes.set(details.requestId, Date.now());
 
-      let requestBody = "";
-      if (details.requestBody) {
-        if (details.requestBody.raw) {
-          try {
-            const decoder = new TextDecoder();
-            requestBody = details.requestBody.raw
-              .map((chunk) => decoder.decode(chunk.bytes))
-              .join("");
-          } catch (e) {
-            requestBody = "[Binary data]";
+        let requestBody = "";
+        if (details.requestBody) {
+          if (details.requestBody.raw) {
+            try {
+              const decoder = new TextDecoder();
+              requestBody = details.requestBody.raw
+                .map((chunk) => decoder.decode(chunk.bytes))
+                .join("");
+            } catch (e) {
+              requestBody = "[Binary data]";
+            }
+          } else if (details.requestBody.formData) {
+            requestBody = JSON.stringify(details.requestBody.formData, null, 2);
           }
-        } else if (details.requestBody.formData) {
-          requestBody = JSON.stringify(details.requestBody.formData, null, 2);
         }
-      }
 
-      const request = {
-        id: details.requestId,
-        url: details.url,
-        method: details.method,
-        timestamp: Date.now(),
-        type: details.type,
-        initiator: details.initiator?.url,
-        requestBody: requestBody || undefined,
-      };
+        const request = {
+          id: details.requestId,
+          url: details.url,
+          method: details.method,
+          timestamp: Date.now(),
+          type: details.type,
+          initiator: details.initiator?.url,
+          requestBody: requestBody || undefined,
+        };
 
-      webRequests.unshift(request);
+        webRequests.unshift(request);
 
-      // Limit to last 500 requests to prevent memory issues
-      if (webRequests.length > 500) {
-        webRequests = webRequests.slice(0, 500);
+        // Limit to last 500 requests to prevent memory issues
+        if (webRequests.length > 500) {
+          webRequests = webRequests.slice(0, 500);
+        }
+        
+        console.log("Background: Captured web request:", details.method, details.url);
+      } catch (error) {
+        console.error("Background: Error in onBeforeRequest:", error);
       }
     },
     { urls: ["<all_urls>"] },
@@ -200,32 +222,44 @@ if (browserAPI?.webRequest) {
     },
     { urls: ["<all_urls>"] }
   );
+} else {
+  console.warn("Background: webRequest API not available - web requests won't be captured");
 }
 
 // Handle messages from content scripts or popup
 browserAPI?.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Background received message:", message);
+  console.log("Background: Received message:", message.type, "from", sender.tab?.url || "popup");
 
-  // Handle any background processing if needed
-  if (message.type === "HEALTH_CHECK") {
-    sendResponse({ status: "ok", timestamp: Date.now() });
+  try {
+    // Handle any background processing if needed
+    if (message.type === "HEALTH_CHECK") {
+      console.log("Background: Health check requested");
+      sendResponse({ status: "ok", timestamp: Date.now() });
+      return true;
+    }
+
+    if (message.type === "GET_WEB_REQUESTS") {
+      console.log("Background: Sending web requests data:", webRequests.length, "requests");
+      sendResponse({ success: true, data: webRequests });
+      return true;
+    }
+
+    if (message.type === "CLEAR_WEB_REQUESTS") {
+      console.log("Background: Clearing web requests data");
+      webRequests = [];
+      requestStartTimes.clear();
+      sendResponse({ success: true });
+      return true;
+    }
+
+    console.log("Background: Unhandled message type:", message.type);
+    // Return false for unhandled messages
+    return false;
+  } catch (error) {
+    console.error("Background: Error handling message:", error);
+    sendResponse({ success: false, error: error.message });
     return true;
   }
-
-  if (message.type === "GET_WEB_REQUESTS") {
-    sendResponse({ success: true, data: webRequests });
-    return true;
-  }
-
-  if (message.type === "CLEAR_WEB_REQUESTS") {
-    webRequests = [];
-    requestStartTimes.clear();
-    sendResponse({ success: true });
-    return true;
-  }
-
-  // Return false for unhandled messages
-  return false;
 });
 
 // Ensure proper cleanup
@@ -233,4 +267,5 @@ browserAPI?.runtime.onSuspend?.addListener(() => {
   console.log("Cookie Inspector background script suspending");
 });
 
-export {};
+export { };
+

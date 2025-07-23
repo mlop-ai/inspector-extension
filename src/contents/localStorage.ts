@@ -12,8 +12,40 @@ export interface LocalStorageItem {
   size: number; // Size in bytes
 }
 
+// Firefox browser API type declaration
+declare const browser: typeof chrome;
+
+// Cross-browser API compatibility
+const browserAPI = (() => {
+  console.log("Content Script: Detecting browser environment...");
+  
+  if (typeof chrome !== "undefined" && chrome.runtime) {
+    console.log("Content Script: Using Chrome API");
+    return chrome;
+  }
+  
+  if (typeof browser !== "undefined" && browser.runtime) {
+    console.log("Content Script: Using Firefox browser API (global)");
+    return browser;
+  }
+  
+  if (typeof (globalThis as any).browser !== "undefined" && (globalThis as any).browser.runtime) {
+    console.log("Content Script: Using Firefox browser API (globalThis)");
+    return (globalThis as any).browser;
+  }
+  
+  console.error("Content Script: Browser extension API not available");
+  return null;
+})();
+
+if (!browserAPI) {
+  console.error("Content Script: Browser extension API not available");
+}
+
 // Listen for messages from popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browserAPI?.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Content Script: Received message:", message.type);
+  
   if (message.type === "GET_LOCALSTORAGE") {
     try {
       const items: LocalStorageItem[] = [];
@@ -31,8 +63,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
 
+      console.log("Content Script: Found localStorage items:", items.length);
       sendResponse({ success: true, data: items });
     } catch (error) {
+      console.error("Content Script: Error getting localStorage:", error);
       sendResponse({
         success: false,
         error:

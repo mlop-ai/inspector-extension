@@ -1,52 +1,46 @@
 import "~main.css";
 
-import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { Button } from "~components/ui/button";
-import { Input } from "~components/ui/input";
 import { Skeleton } from "~components/ui/skeleton";
 import { Toaster } from "~components/ui/toaster";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  TooltipProvider
 } from "~components/ui/tooltip";
 import { useToast } from "~lib/use-toast";
 
 import { CookieList } from "~components/cookie-list";
+import { DataControls } from "~components/data-controls";
 import { LocalStorageList } from "~components/localStorage-list";
 import { WebRequestList } from "~components/web-request-list";
 import { WebRequestTypeFilters } from "~components/web-request-type-filters";
-import { DataControls } from "~components/data-controls";
-import { DownloadService } from "~lib/download-service";
-import { useCookieStore } from "~store/cookie-store";
-import type {
-  BrowserCookie,
-  LocalStorageItem,
-  WebRequest,
-} from "~lib/browser-api";
 import {
-  useCurrentTab,
+  useClearLocalStorage,
+  useClearWebRequests,
   useCookies,
+  useCopyAllCookies,
+  useCopyAllLocalStorage,
+  useCopyCookie,
+  useCopyLocalStorageItem,
+  useCopyWebRequestUrl,
+  useCurrentTab,
+  useDeleteCookie,
+  useDeleteLocalStorageItem,
   useLocalStorage,
-  useWebRequests,
   useRefreshCookies,
   useRefreshLocalStorage,
   useRefreshWebRequests,
   useSendCookies,
   useSendLocalStorage,
-  useCopyCookie,
-  useCopyLocalStorageItem,
-  useCopyWebRequestUrl,
-  useCopyAllCookies,
-  useCopyAllLocalStorage,
-  useDeleteCookie,
-  useDeleteLocalStorageItem,
-  useClearLocalStorage,
-  useClearWebRequests,
+  useWebRequests,
 } from "~hooks/use-storage";
+import type {
+  BrowserCookie
+} from "~lib/browser-api";
+import { DownloadService } from "~lib/download-service";
+import { useCookieStore } from "~store/cookie-store";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -66,11 +60,14 @@ function CookieInspector() {
     currentUrl,
     searchTerm,
     darkMode,
+    systemDarkMode,
     endpoint,
     sendResult,
     activeTab,
     webRequestTypeFilters,
     setSearchTerm,
+    setDarkMode,
+    setSystemDarkMode,
     toggleDarkMode,
     setEndpoint,
     setActiveTab,
@@ -80,6 +77,32 @@ function CookieInspector() {
     getFilteredLocalStorage,
     getFilteredWebRequests,
   } = useCookieStore();
+
+  // System dark mode detection and listener
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // Set initial system dark mode
+      setSystemDarkMode(mediaQuery.matches);
+      
+      // Listen for changes
+      const handleChange = (e: MediaQueryListEvent) => {
+        setSystemDarkMode(e.matches);
+      };
+      
+      mediaQuery.addEventListener('change', handleChange);
+      
+      return () => {
+        mediaQuery.removeEventListener('change', handleChange);
+      };
+    }
+  }, [setSystemDarkMode]);
+
+  // Handle dark mode application
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
 
   // React Query hooks
   const { data: currentTab, error: tabError } = useCurrentTab();
@@ -113,11 +136,6 @@ function CookieInspector() {
   const deleteLocalStorageItem = useDeleteLocalStorageItem();
   const clearLocalStorage = useClearLocalStorage();
   const clearWebRequests = useClearWebRequests();
-
-  // Handle dark mode
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
 
   // Get filtered data
   const filteredCookies = getFilteredCookies(cookies);
@@ -349,14 +367,15 @@ function CookieInspector() {
         : webRequestsLoading;
   if (isLoading) {
     return (
-      <div className="w-full max-w-[1200px] min-w-[800px] h-[800px] p-6 space-y-4">
+      <div className="min-w-80 max-w-md p-4 space-y-4 relative">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
+        <Toaster />
       </div>
     );
   }
@@ -367,31 +386,32 @@ function CookieInspector() {
 
   return (
     <TooltipProvider>
-      <div className="w-full max-w-[1200px] min-w-[800px] h-[800px] p-4 bg-background text-foreground font-mono text-sm flex flex-col overflow-hidden">
+      <div className="min-w-80 max-w-md p-3 bg-background text-foreground flex flex-col relative">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-base font-bold text-blue-600 dark:text-blue-400">
-              Storage Inspector
+            <h1 className="text-lg font-semibold text-blue-600 dark:text-blue-400 leading-tight">
+              Inspector
             </h1>
-            <div className="text-xs text-muted-foreground font-mono truncate">
+            <div className="text-xs text-muted-foreground truncate">
               {currentUrl ? new URL(currentUrl).hostname : "Loading..."}
             </div>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-1 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={toggleDarkMode}
-              className="text-xs h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
+              title={`Toggle dark mode (System: ${systemDarkMode ? 'Dark' : 'Light'})`}
             >
-              {darkMode ? "☀️" : "🌙"}
+              {darkMode ? "🌙" : "☀️"}
             </Button>
             <Button
               onClick={handleRefresh}
               variant="outline"
               size="sm"
-              className="text-xs h-7 px-2"
+              className="h-8 px-2 text-xs"
               disabled={
                 (activeTab === "cookies" && refreshCookies.isPending) ||
                 (activeTab === "localStorage" &&
@@ -402,19 +422,19 @@ function CookieInspector() {
               {(activeTab === "cookies" && refreshCookies.isPending) ||
               (activeTab === "localStorage" && refreshLocalStorage.isPending) ||
               (activeTab === "webRequests" && refreshWebRequests.isPending)
-                ? "Refreshing..."
-                : "Refresh"}
+                ? "..."
+                : "↻"}
             </Button>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-3 border-b">
+        <div className="flex mb-3 border-b">
           <Button
             variant={activeTab === "cookies" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("cookies")}
-            className="text-xs rounded-b-none h-7"
+            className="rounded-b-none h-8 text-xs px-2 flex-1"
           >
             Cookies ({cookies.length})
           </Button>
@@ -422,15 +442,15 @@ function CookieInspector() {
             variant={activeTab === "localStorage" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("localStorage")}
-            className="text-xs rounded-b-none h-7"
+            className="rounded-b-none h-8 text-xs px-2 flex-1"
           >
-            LocalStorage ({localStorageItems.length})
+            Storage ({localStorageItems.length})
           </Button>
           <Button
             variant={activeTab === "webRequests" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("webRequests")}
-            className="text-xs rounded-b-none h-7"
+            className="rounded-b-none h-8 text-xs px-2 flex-1"
           >
             Requests ({webRequests.length})
           </Button>
@@ -492,10 +512,10 @@ function CookieInspector() {
         )}
 
         {/* Data List */}
-        <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden border rounded bg-background/50 min-h-0">
+        <div className="border rounded bg-background/50 min-h-32 max-h-96 overflow-y-auto mb-3">
           {activeTab === "cookies" ? (
             filteredCookies.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground text-xs">
+              <div className="p-4 text-center text-muted-foreground text-sm">
                 {cookies.length === 0
                   ? "No cookies detected"
                   : "No matching cookies"}
@@ -509,10 +529,10 @@ function CookieInspector() {
             )
           ) : activeTab === "localStorage" ? (
             filteredLocalStorage.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground text-xs">
+              <div className="p-4 text-center text-muted-foreground text-sm">
                 {localStorageItems.length === 0
-                  ? "No localStorage items detected"
-                  : "No matching localStorage items"}
+                  ? "No storage items detected"
+                  : "No matching storage items"}
               </div>
             ) : (
               <LocalStorageList
@@ -522,7 +542,7 @@ function CookieInspector() {
               />
             )
           ) : filteredWebRequests.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-xs">
+            <div className="p-4 text-center text-muted-foreground text-sm">
               {webRequests.length === 0
                 ? "No web requests detected"
                 : "No matching web requests"}
@@ -536,15 +556,16 @@ function CookieInspector() {
         </div>
 
         {/* Legend */}
-        <div className="mt-2 text-xs text-muted-foreground flex-shrink-0">
+        <div className="text-xs text-muted-foreground">
           {activeTab === "cookies"
-            ? "Flags: S=Secure, H=HttpOnly, SS=SameSite, T=Session • Click row to copy value • Click × to delete"
+            ? "Click row to copy • × to delete"
             : activeTab === "localStorage"
-              ? "Click row to copy value • Click × to delete item"
-              : "Filter by type above • Click row to expand and see request/response details • Status codes: 2xx=Success, 3xx=Redirect, 4xx/5xx=Error"}
+              ? "Click row to copy • × to delete"
+              : "Click row to expand details"}
         </div>
+        
+        <Toaster />
       </div>
-      <Toaster />
     </TooltipProvider>
   );
 }

@@ -3,6 +3,9 @@
  * Uses Plasmo's browser utilities for maximum compatibility
  */
 
+// Firefox browser API type declaration
+declare const browser: typeof chrome;
+
 interface BrowserTab {
   id?: number;
   url?: string;
@@ -54,57 +57,94 @@ interface WebRequest {
 
 class BrowserAPI {
   private async getBrowser() {
-    // Plasmo provides cross-browser compatibility
+    console.log("BrowserAPI: Detecting browser environment...");
+    
+    // Chrome/Chromium-based browsers
     if (typeof chrome !== "undefined" && chrome.tabs) {
+      console.log("BrowserAPI: Using Chrome API");
       return chrome;
     }
-    // Firefox WebExtensions API
-    if (
-      typeof (globalThis as any).browser !== "undefined" &&
-      (globalThis as any).browser.tabs
-    ) {
+    
+    // Firefox WebExtensions API (check multiple locations)
+    if (typeof browser !== "undefined" && browser.tabs) {
+      console.log("BrowserAPI: Using Firefox browser API (global)");
+      return browser;
+    }
+    
+    if (typeof (globalThis as any).browser !== "undefined" && (globalThis as any).browser.tabs) {
+      console.log("BrowserAPI: Using Firefox browser API (globalThis)");
       return (globalThis as any).browser;
     }
+    
+    // Firefox might expose it differently
+    if (typeof (window as any).browser !== "undefined" && (window as any).browser.tabs) {
+      console.log("BrowserAPI: Using Firefox browser API (window)");
+      return (window as any).browser;
+    }
+    
+    console.error("BrowserAPI: No browser API available. Available globals:", {
+      chrome: typeof chrome,
+      browser: typeof browser,
+      globalThisBrowser: typeof (globalThis as any).browser,
+      windowBrowser: typeof (window as any).browser
+    });
+    
     throw new Error("Browser API not available");
   }
 
   async getCurrentTab(): Promise<BrowserTab> {
-    const browserAPI = await this.getBrowser();
+    try {
+      const browserAPI = await this.getBrowser();
+      console.log("BrowserAPI: Getting current tab...");
 
-    const tabs = await browserAPI.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
+      const tabs = await browserAPI.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
 
-    if (!tabs[0]?.url) {
-      throw new Error("Cannot access current tab URL");
+      console.log("BrowserAPI: Found tabs:", tabs);
+
+      if (!tabs[0]?.url) {
+        throw new Error("Cannot access current tab URL");
+      }
+
+      return tabs[0];
+    } catch (error) {
+      console.error("BrowserAPI: getCurrentTab failed:", error);
+      throw error;
     }
-
-    return tabs[0];
   }
 
   async getCookies(url: string): Promise<BrowserCookie[]> {
-    const browserAPI = await this.getBrowser();
+    try {
+      const browserAPI = await this.getBrowser();
+      console.log("BrowserAPI: Getting cookies for URL:", url);
 
-    if (!browserAPI.cookies) {
-      throw new Error("Cookies API not available");
+      if (!browserAPI.cookies) {
+        console.error("BrowserAPI: Cookies API not available");
+        throw new Error("Cookies API not available");
+      }
+
+      const cookies = await browserAPI.cookies.getAll({ url });
+      console.log("BrowserAPI: Found cookies:", cookies.length);
+
+      return cookies.map(
+        (cookie): BrowserCookie => ({
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain,
+          path: cookie.path,
+          secure: cookie.secure,
+          httpOnly: cookie.httpOnly,
+          sameSite: this.normalizeSameSite(cookie.sameSite),
+          expirationDate: cookie.expirationDate,
+          session: cookie.session,
+        })
+      );
+    } catch (error) {
+      console.error("BrowserAPI: getCookies failed:", error);
+      throw error;
     }
-
-    const cookies = await browserAPI.cookies.getAll({ url });
-
-    return cookies.map(
-      (cookie): BrowserCookie => ({
-        name: cookie.name,
-        value: cookie.value,
-        domain: cookie.domain,
-        path: cookie.path,
-        secure: cookie.secure,
-        httpOnly: cookie.httpOnly,
-        sameSite: this.normalizeSameSite(cookie.sameSite),
-        expirationDate: cookie.expirationDate,
-        session: cookie.session,
-      })
-    );
   }
 
   private normalizeSameSite(sameSite?: string): BrowserCookie["sameSite"] {
@@ -354,4 +394,5 @@ class BrowserAPI {
 }
 
 export const browserAPI = new BrowserAPI();
-export type { BrowserTab, BrowserCookie, LocalStorageItem, WebRequest };
+export type { BrowserCookie, BrowserTab, LocalStorageItem, WebRequest };
+

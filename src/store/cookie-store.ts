@@ -1,15 +1,24 @@
 import { create } from "zustand";
 import type {
-  BrowserCookie,
-  LocalStorageItem,
-  WebRequest,
+    BrowserCookie,
+    LocalStorageItem,
+    WebRequest,
 } from "~lib/browser-api";
+
+// Utility function to detect system dark mode preference
+const getSystemDarkMode = (): boolean => {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  return false;
+};
 
 interface CookieStore {
   // State
   currentUrl: string;
   searchTerm: string;
   darkMode: boolean;
+  systemDarkMode: boolean;
   endpoint: string;
   sendResult: string | null;
   activeTab: "cookies" | "localStorage" | "webRequests";
@@ -18,6 +27,8 @@ interface CookieStore {
   // Actions
   setCurrentUrl: (url: string) => void;
   setSearchTerm: (term: string) => void;
+  setDarkMode: (mode: boolean) => void;
+  setSystemDarkMode: (systemMode: boolean) => void;
   toggleDarkMode: () => void;
   setEndpoint: (endpoint: string) => void;
   setSendResult: (result: string | null) => void;
@@ -32,10 +43,11 @@ interface CookieStore {
 }
 
 export const useCookieStore = create<CookieStore>((set, get) => ({
-  // Initial state
+  // Initial state - start with system preference
   currentUrl: "",
   searchTerm: "",
-  darkMode: false,
+  darkMode: getSystemDarkMode(),
+  systemDarkMode: getSystemDarkMode(),
   endpoint: "https://httpbin.org/post",
   sendResult: null,
   activeTab: "cookies",
@@ -44,6 +56,12 @@ export const useCookieStore = create<CookieStore>((set, get) => ({
   // Actions
   setCurrentUrl: (url) => set({ currentUrl: url }),
   setSearchTerm: (term) => set({ searchTerm: term }),
+  setDarkMode: (mode) => set({ darkMode: mode }),
+  setSystemDarkMode: (systemMode) => set({ 
+    systemDarkMode: systemMode,
+    // Update dark mode to follow system if user hasn't manually overridden
+    darkMode: systemMode 
+  }),
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   setEndpoint: (endpoint) => set({ endpoint }),
   setSendResult: (result) => set({ sendResult: result }),

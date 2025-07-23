@@ -1,13 +1,16 @@
 {
-  "name": "cookie-reader-extension",
-  "displayName": "Cookie Reader",
-  "version": "1.0.0",
-  "description": "Chrome extension to read and inspect all cookies associated with the current page",
-  "author": "coreychiu",
+  "name": "inspector-extension",
+  "displayName": "Inspector",
+  "version": "0.0.1",
+  "description": "Extension to read and inspect all cookies associated with the current page",
+  "author": "lakee",
   "scripts": {
     "dev": "plasmo dev",
+    "dev:firefox": "plasmo dev --target=firefox-mv3",
     "build": "plasmo build",
-    "package": "plasmo package"
+    "build:firefox": "plasmo build --target=firefox-mv3",
+    "package": "plasmo package",
+    "package:firefox": "plasmo package --target=firefox-mv3"
   },
   "dependencies": {
     "@plasmohq/storage": "^1.15.0",
@@ -55,9 +58,6 @@
     ],
     "background": {
       "service_worker": "background.js"
-    },
-    "content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self'"
     }
   }
 }
