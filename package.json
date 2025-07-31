@@ -13,7 +13,6 @@
     "package:firefox": "plasmo package --target=firefox-mv3"
   },
   "dependencies": {
-    "@plasmohq/storage": "^1.15.0",
     "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
@@ -53,7 +52,6 @@
       "cookies",
       "activeTab",
       "tabs",
-      "scripting",
       "webRequest"
     ],
     "background": {

@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type {
-    BrowserCookie,
-    LocalStorageItem,
-    WebRequest,
+  BrowserCookie,
+  LocalStorageItem,
+  WebRequest,
 } from "~lib/browser-api";
 
 // Utility function to detect system dark mode preference
@@ -48,7 +48,7 @@ export const useCookieStore = create<CookieStore>((set, get) => ({
   searchTerm: "",
   darkMode: getSystemDarkMode(),
   systemDarkMode: getSystemDarkMode(),
-  endpoint: "https://httpbin.org/post",
+  endpoint: "https://mlop.ai/post",
   sendResult: null,
   activeTab: "cookies",
   webRequestTypeFilters: new Set(),
