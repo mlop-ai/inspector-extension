@@ -78,7 +78,8 @@
   #__plasmo {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    width: 400px;
+    height: 600px;
   }
 }
 

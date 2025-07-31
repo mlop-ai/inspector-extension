@@ -367,7 +367,7 @@ function CookieInspector() {
         : webRequestsLoading;
   if (isLoading) {
     return (
-      <div className="min-w-80 max-w-md p-4 space-y-4 relative">
+      <div className="w-full h-full p-4 space-y-4 relative">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <div className="space-y-2">
@@ -386,7 +386,7 @@ function CookieInspector() {
 
   return (
     <TooltipProvider>
-      <div className="min-w-80 max-w-md p-3 bg-background text-foreground flex flex-col relative">
+      <div className="w-full h-full p-3 bg-background text-foreground flex flex-col relative">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="min-w-0 flex-1">
@@ -512,7 +512,7 @@ function CookieInspector() {
         )}
 
         {/* Data List */}
-        <div className="border rounded bg-background/50 min-h-32 max-h-96 overflow-y-auto mb-3">
+        <div className="border rounded bg-background/50 flex-1 overflow-y-auto mb-3">
           {activeTab === "cookies" ? (
             filteredCookies.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-sm">
